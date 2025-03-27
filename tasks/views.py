@@ -4,9 +4,15 @@ from rest_framework.response import Response
 from .models import Task
 from .serializers import TaskSerializer
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
 
 # Create your views here.
-client = MongoClient("mongodb+srv://delvintrung:14032004trung@cluster0.0ftnj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
+
 db = client["spotify_clone"]
 collection = db["tasks"]
 
