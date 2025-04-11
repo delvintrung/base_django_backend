@@ -1,22 +1,17 @@
-"""
-URL configuration for backend_django project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
+from .views import artistView  # nếu có view này ở cùng cấp
+from .views import userView
 
 urlpatterns = [
-    path('api/', include('api.urls')),
+    path('admin/', admin.site.urls),
+
+    # Lấy danh sách bài hát
+    path('api/songs/', artistView.get_all_artists),
+
+    # Lấy tất cả user
+    path('api/users/', userView.get_all_users),
+
+    # Lấy tin nhắn giữa current user và user khác (cần đăng nhập)
+    path('api/users/messages/<int:user_id>/', userView.get_messages),
 ]
