@@ -23,6 +23,6 @@ urlpatterns = [
     path("api/admin/artists", artistView.createArtist,name='admin_create_artist'),
     path("api/admin/songs/<int:id>", adminView.deleteSong ,name='admin_delete_song'),
     path("api/admin/albums", adminView.createAlbum ,name='admin_create_album'),
-    path("api/admin/albums/<int:id>", adminView.deleteAlbum, name='admin_delete_album'),
+    path("api/admin/albums/<int:id>", adminView.delete_album, name='admin_delete_album'),
 
 ]
