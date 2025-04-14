@@ -2,6 +2,10 @@ from mongoengine import Document, StringField, ReferenceField, IntField, DateTim
 import datetime
 
 class Song(Document):
+    meta = {
+        'collection': 'songs',  # ⚠️ Thêm dòng này để match với MongoDB
+        'strict': False
+    }
     title = StringField(required=True)
     artist = ReferenceField('Artist', required=True)  # Sử dụng chuỗi cho Artist
     imageUrl = StringField(required=True)
