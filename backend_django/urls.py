@@ -1,8 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from .views import artistView  # nếu có view này ở cùng cấp
-from .views import userView
-from .views import favoriteView
+from .views import artistView,favoriteView,userView,adminViews # nếu có view này ở cùng cấp
 
 from django.http import JsonResponse
 
@@ -10,10 +8,11 @@ def home(request):
     return JsonResponse({"message": "Welcome to the API!"})
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('', home),
-    # Lấy danh sách bài hát
+    path('admin/', admin.site.urls),
+    # bài hát
     path('api/songs/', artistView.get_all_artists),
+    
 
     # Lấy tất cả user
     path('api/users/', userView.get_all_users),
@@ -28,7 +27,14 @@ urlpatterns = [
     # hiển thị danh sách bài đề cử
     path('songs/featured', favoriteView.get_featured_songs),
     path('songs/made-for-you', favoriteView.get_made_for_you_songs),
-    #tạo nghệ sĩ
-    path('artists/create', artistView.create_artist),
+    
+    # nghệ sĩ
+    path('artists/', artistView.get_all_artists),
+    path('artists/create', adminViews.create_artist),
+    path('artists/update/<str:artist_id>/', adminViews.update_artist, name='update_artist'),  
+    path('artists/delete/<str:artist_id>/', adminViews.delete_artist, name='delete_artist'),
+    
+    path('songs/featured', artistView.get_featured_songs),
+    path('songs/made-for-you', artistView.get_made_for_you_songs),
 
 ]

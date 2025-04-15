@@ -9,6 +9,6 @@ class Message(Document):
     updatedAt = DateTimeField(default=datetime.datetime.utcnow)
 
     meta = {
-        'collection': 'message',  # Trỏ tới đúng collection trong MongoDB
+        'collection': 'messages',  # Trỏ tới đúng collection trong MongoDB
         'ordering': ['createdAt']
     }
