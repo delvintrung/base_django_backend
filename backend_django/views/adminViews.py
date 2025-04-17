@@ -1,20 +1,21 @@
 # views.py
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 import cloudinary.uploader
-import cloudinary.api   
-import os
 import cloudinary.uploader
 import json
+from django.utils.dateparse import parse_date
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import cloudinary.api   
+import os
+from bson import ObjectId
 
 from ..models.song import Song
 from ..models.album import Album
 from ..models.artist import Artist
 from ..models.genre import Genre
-from django.utils.dateparse import parse_date
-from bson import ObjectId
+from ..models.user import User
 
 
 def upload_to_cloudinary(file, folder_name="others"):
@@ -28,6 +29,71 @@ def upload_to_cloudinary(file, folder_name="others"):
     except Exception as e:
         print("Error in uploadToCloudinary:", e)
         raise Exception("Error uploading to cloudinary")
+
+#user
+#update user
+@csrf_exempt
+def update_user(request, user_id):
+    if request.method != "PUT":
+        return JsonResponse({"error": "Only PUT allowed"}, status=405)
+
+    try:
+        user = User.objects.get(id=user_id)
+        data = json.loads(request.body)
+
+        full_name = data.get("fullName", user.fullName)
+        clerk_id = data.get("clerkId", user.clerkId)
+
+        data_changed = False
+
+        if user.fullName != full_name:
+            user.fullName = full_name
+            data_changed = True
+        if user.clerkId != clerk_id:
+            user.clerkId = clerk_id
+            data_changed = True
+
+        if data_changed:
+            user.save()
+
+        return JsonResponse({
+            "message": "User updated successfully" if data_changed else "No changes detected",
+            "user": {
+                "id": str(user.id),
+                "fullName": user.fullName,
+                "clerkId": user.clerkId,
+                "imageUrl": user.imageUrl,
+                "createdAt": user.createdAt.isoformat(),
+                "updatedAt": user.updatedAt.isoformat()
+            }
+        }, status=200)
+
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        print("Error in update_user:", e)
+        return JsonResponse({"error": str(e)}, status=500)
+
+#delete user
+@csrf_exempt
+def delete_user(request, user_id):
+    if request.method != "DELETE":
+        return JsonResponse({"error": "Only DELETE allowed"}, status=405)
+
+    try:
+        user = User.objects.get(id=user_id)
+        user.delete()
+        return JsonResponse({
+            "message": "User deleted successfully",
+            "userId": user_id
+        }, status=200)
+
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        print("Error in delete_user:", e)
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 #artist
 #create artist
@@ -177,7 +243,6 @@ def create_song(request):
             album.save()
 
         return JsonResponse(song.to_json(), status=201)
-
 
 @csrf_exempt
 def update_song(request, song_id):

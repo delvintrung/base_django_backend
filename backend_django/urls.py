@@ -14,8 +14,11 @@ urlpatterns = [
     path('api/songs/', artistView.get_all_artists),
     
 
+    #user
     # Lấy tất cả user
     path('api/users/', userView.get_all_users),
+    path('users/update/<str:user_id>/', adminViews.update_user, name='update_user'),
+    path('users/delete/<str:user_id>/', adminViews.delete_user, name='delete_user'),
 
     # Lấy tin nhắn giữa current user và user khác (cần đăng nhập)
     path('api/users/messages/<int:user_id>/', userView.get_messages),
@@ -34,7 +37,7 @@ urlpatterns = [
     path('artists/update/<str:artist_id>/', adminViews.update_artist, name='update_artist'),  
     path('artists/delete/<str:artist_id>/', adminViews.delete_artist, name='delete_artist'),
     
-    path('songs/featured', artistView.get_featured_songs),
-    path('songs/made-for-you', artistView.get_made_for_you_songs),
+    # path('songs/featured', artistView.get_featured_songs),
+    # path('songs/made-for-you', artistView.get_made_for_you_songs),
 
 ]
