@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from .views import artistView,favoriteView,userView,adminViews # nếu có view này ở cùng cấp
+from .views import artistView,favoriteView,userView,adminViews,authView # nếu có view này ở cùng cấp
 
 from django.http import JsonResponse
 
@@ -17,6 +17,7 @@ urlpatterns = [
     #user
     # Lấy tất cả user
     path('api/users/', userView.get_all_users),
+    path('auth/callback/', authView.auth_callback, name='auth_callback'),
     path('users/update/<str:user_id>/', adminViews.update_user, name='update_user'),
     path('users/delete/<str:user_id>/', adminViews.delete_user, name='delete_user'),
 
