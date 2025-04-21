@@ -7,18 +7,11 @@ from ..models.album import Album
 from mongoengine.queryset.visitor import Q
 
 def get_counts(request):
-    print("Bắt đầu hàm get_counts")
     try:
         album_count = Album.objects.count()
-
         artist_count = Artist.objects.count()
-
         user_count = User.objects.count()
-
         song_count = Song.objects.count()
-
-        print("Albums list:", list(Album.objects.all()))
-
         return JsonResponse({
             'totalAlbums': album_count,
             'totalSongs': song_count,

@@ -14,6 +14,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 from mongoengine import connect
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -131,6 +134,16 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Cloudinary settings
+cloudinary.config(
+  cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),  # Your Cloudinary cloud name
+  api_key=os.getenv("CLOUDINARY_API_KEY"),        # Your Cloudinary API key
+  api_secret=os.getenv("CLOUDINARY_API_SECRET")   # Your Cloudinary API secret
+)
+
+# Default file storage using Cloudinary
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 
 # Internationalization

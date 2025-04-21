@@ -4,9 +4,10 @@ from .song import Song  # đảm bảo bạn đã có model Song
 
 class Album(Document):
     meta = {
-        'collection': 'album',
+        'collection': 'albums',
         'indexes': ['title', 'releaseYear'],
-        'ordering': ['-createdAt']
+        'ordering': ['-createdAt'],
+        'strict': False
     }
 
     title = StringField(required=True)

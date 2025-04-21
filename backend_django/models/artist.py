@@ -4,7 +4,7 @@ from .genre import Genre  # Đảm bảo import đúng vị trí file chứa gen
 
 class Artist(Document):
     meta = {
-        'collection': 'artist',
+        'collection': 'artists',
         'strict': False
     }
 
