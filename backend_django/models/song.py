@@ -2,12 +2,16 @@ from mongoengine import Document, StringField, ReferenceField, IntField, DateTim
 import datetime
 
 class Song(Document):
+    meta = {
+        'collection': 'songs',
+        'strict': False,
+    }
     title = StringField(required=True)
-    artist = ReferenceField('Artist', required=True)  # Sử dụng chuỗi cho Artist
+    artist = ReferenceField('Artist', required=True)  
     imageUrl = StringField(required=True)
     audioUrl = StringField(required=True)
     duration = IntField(required=True)
-    albumId = ReferenceField('Album', required=False)  # Sử dụng chuỗi cho Album
+    albumId = ReferenceField('Album', required=False)
 
     createdAt = DateTimeField(default=datetime.datetime.utcnow)
     updatedAt = DateTimeField(default=datetime.datetime.utcnow)
