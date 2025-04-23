@@ -16,9 +16,6 @@ class Album(Document):
     releaseYear = IntField(required=True)
     songs = ListField(ReferenceField('Song'))  # Dùng string thay vì import Song
 
-    createdAt = DateTimeField(default=datetime.datetime.utcnow)
-    updatedAt = DateTimeField(default=datetime.datetime.utcnow)
-
     def save(self, *args, **kwargs):
         self.updatedAt = datetime.datetime.utcnow()
         return super(Album, self).save(*args, **kwargs)

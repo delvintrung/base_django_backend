@@ -1,29 +1,48 @@
 from django.contrib import admin
 from django.urls import path
-from .views import userView,statView,artistView,adminView,testView
+
+from .views import artistView,favoriteView,userView,adminViews,authView # nếu có view này ở cùng cấp
+
+from django.http import JsonResponse
+
+def home(request):
+    return JsonResponse({"message": "Welcome to the API!"})
+
 
 urlpatterns = [
+    path('', home),
     path('admin/', admin.site.urls),
-
-    # Lấy danh sách bài hát
+    # bài hát
     path('api/songs/', artistView.get_all_artists),
+    
 
+    #user
     # Lấy tất cả user
     path('api/users/', userView.get_all_users),
+    path('auth/callback/', authView.auth_callback, name='auth_callback'),
+    path('users/update/<str:user_id>/', adminViews.update_user, name='update_user'),
+    path('users/delete/<str:user_id>/', adminViews.delete_user, name='delete_user'),
 
     # Lấy tin nhắn giữa current user và user khác (cần đăng nhập)
     path('api/users/messages/<int:user_id>/', userView.get_messages),
 
-    #STATS
-    path('api/stats', statView.get_counts, name='get_countUserArtistsAlbumsSongs'),
-    # #ADMIN
-    # path('api/admin/check',adminView.checkAdmin, name='admin_check'),
-    path("api/admin/songs", adminView.create_song ,name='admin_create_song'),
-    path("api/admin/songs/<str:id>", adminView.update_song,name='admin_update_song'),
-    # path("api/admin/artists", artistView.createArtist,name='admin_create_artist'),
-    path("api/admin/songs/<str:song_id>", adminView.delete_song ,name='admin_delete_song'),
-    path("api/admin/albums", adminView.createAlbum ,name='admin_create_album'),
-    path("api/admin/albums/<str:album_id>", adminView.delete_album, name='admin_delete_album'),
-    # path('test-upload/', testView.test_upload),
+    #favorite
+    path('favorites/favorite', favoriteView.get_favorite_by_id),
+    path('favorites/add', favoriteView.add_to_favorite),
+    path('favorites/remove', favoriteView.remove_favorite),
+    
+    # hiển thị danh sách bài đề cử
+    path('songs/featured', favoriteView.get_featured_songs),
+    path('songs/made-for-you', favoriteView.get_made_for_you_songs),
+    
+    # nghệ sĩ
+    path('artists/', artistView.get_all_artists),
+    path('artists/create', adminViews.create_artist),
+    path('artists/update/<str:artist_id>/', adminViews.update_artist, name='update_artist'),  
+    path('artists/delete/<str:artist_id>/', adminViews.delete_artist, name='delete_artist'),
+    
+    # path('songs/featured', artistView.get_featured_songs),
+    # path('songs/made-for-you', artistView.get_made_for_you_songs),
+
 
 ]

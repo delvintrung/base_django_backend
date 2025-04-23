@@ -3,8 +3,8 @@ import datetime
 
 class Song(Document):
     meta = {
-        'collection': 'songs',
-        'strict': False,
+        'collection': 'songs',  # ⚠️ Thêm dòng này để match với MongoDB
+        'strict': False
     }
     title = StringField(required=True)
     artist = ReferenceField('Artist', required=True)  
