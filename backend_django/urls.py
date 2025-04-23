@@ -1,11 +1,13 @@
 from django.contrib import admin
 from django.urls import path
+
 from .views import artistView,favoriteView,userView,adminViews,authView # nếu có view này ở cùng cấp
 
 from django.http import JsonResponse
 
 def home(request):
     return JsonResponse({"message": "Welcome to the API!"})
+
 
 urlpatterns = [
     path('', home),
@@ -23,6 +25,7 @@ urlpatterns = [
 
     # Lấy tin nhắn giữa current user và user khác (cần đăng nhập)
     path('api/users/messages/<int:user_id>/', userView.get_messages),
+
     #favorite
     path('favorites/favorite', favoriteView.get_favorite_by_id),
     path('favorites/add', favoriteView.add_to_favorite),
@@ -40,5 +43,6 @@ urlpatterns = [
     
     # path('songs/featured', artistView.get_featured_songs),
     # path('songs/made-for-you', artistView.get_made_for_you_songs),
+
 
 ]
