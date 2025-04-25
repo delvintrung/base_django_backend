@@ -1,16 +1,16 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import artistView,favoriteView,userView,adminViews,authView,albumView,songView # nếu có view này ở cùng cấp
+from .views import artistView,favoriteView,userView,adminView,albumView,songView
 
 from django.http import JsonResponse
-from .views.authView import (
-    auth_callback, 
-    get_current_user, 
-    protected_view, 
-    public_view,
-    check_premium_status,
-    check_admin_status
-)
+# from .views.authView import (
+#     auth_callback, 
+#     get_current_user, 
+#     protected_view, 
+#     public_view,
+#     check_premium_status,
+#     check_admin_status
+# )
 
 def home(request):
     return JsonResponse({"message": "Welcome to the API!"})
@@ -26,10 +26,10 @@ urlpatterns = [
 
     #user
     # Lấy tất cả user
-    path('api/users/', userView.get_all_users),
-    path('auth/callback/', authView.auth_callback, name='auth_callback'),
-    path('users/update/<str:user_id>/', adminViews.update_user, name='update_user'),
-    path('users/delete/<str:user_id>/', adminViews.delete_user, name='delete_user'),
+    # path('api/users/', userView.get_all_users),
+    # path('auth/callback/', authView.auth_callback, name='auth_callback'),
+    # path('users/update/<str:user_id>/', adminViews.update_user, name='update_user'),
+    # path('users/delete/<str:user_id>/', adminViews.delete_user, name='delete_user'),
 
     # Lấy tin nhắn giữa current user và user khác (cần đăng nhập)
     path('api/users/messages/<int:user_id>/', userView.get_messages),
