@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, DateField, ListField, ReferenceField
+from mongoengine import Document, StringField, DateTimeField, DateField, ListField, ReferenceField
 import datetime
 from .genre import Genre  # Đảm bảo import đúng vị trí file chứa genre
 
@@ -11,8 +11,10 @@ class Artist(Document):
     name = StringField(required=True)
     birthdate = DateField(required=True)
     imageUrl = StringField(required=True)
-    genres = ListField(ReferenceField(Genre))  # Trường genres lưu các ObjectId của Genre
+    genres = ListField(ReferenceField(Genre))
+    createdAt = DateTimeField(default=datetime.datetime.utcnow)
+    updatedAt = DateTimeField(default=datetime.datetime.utcnow)
 
     def save(self, *args, **kwargs):
-        # Nếu bạn muốn tự động cập nhật thời gian khi đối tượng được chỉnh sửa, thêm dòng này:
+        self.updatedAt = datetime.datetime.utcnow()
         return super(Artist, self).save(*args, **kwargs)

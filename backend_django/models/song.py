@@ -1,21 +1,25 @@
-from mongoengine import Document, StringField, ReferenceField, IntField, DateTimeField
-import datetime
-
+from mongoengine import Document, StringField, DateTimeField, ObjectIdField, ReferenceField, IntField
+from datetime import datetime
+from .artist import Artist
 class Song(Document):
     meta = {
-        'collection': 'songs',  # ⚠️ Thêm dòng này để match với MongoDB
-        'strict': False
+        'collection': 'songs',
+        'strict': False,
+        'indexes': [
+            'title',
+            'artist',
+            'albumId',
+        ]
     }
     title = StringField(required=True)
-    artist = ReferenceField('Artist', required=True)  
-    imageUrl = StringField(required=True)
-    audioUrl = StringField(required=True)
+    artist = ReferenceField(Artist, required=True)
+    albumId = ObjectIdField(required=True)
     duration = IntField(required=True)
-    albumId = ReferenceField('Album', required=False)
-
-    createdAt = DateTimeField(default=datetime.datetime.utcnow)
-    updatedAt = DateTimeField(default=datetime.datetime.utcnow)
+    imageUrl = StringField(required=True)   
+    audioUrl = StringField(required=True)
+    createdAt = DateTimeField(default=datetime.now)
+    updatedAt = DateTimeField(default=datetime.now)
 
     def save(self, *args, **kwargs):
-        self.updatedAt = datetime.datetime.utcnow()
+        self.updatedAt = datetime.now()
         return super(Song, self).save(*args, **kwargs)

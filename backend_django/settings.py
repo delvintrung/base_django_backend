@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     'backend_django',
     "channels",
     'corsheaders',
-    
 ]
 
 ASGI_APPLICATION = "backend_django.asgi.application"
