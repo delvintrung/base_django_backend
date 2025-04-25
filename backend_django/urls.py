@@ -16,9 +16,9 @@ def home(request):
     return JsonResponse({"message": "Welcome to the API!"})
 
 urlpatterns = [
-    path('', home),
     path('admin/', admin.site.urls),
-    # bài hát
+
+    # Lấy danh sách bài hát
     path('api/songs/', artistView.get_all_artists),
     path('api/songs/create', songView.create_song),
     path('api/songs/<str:song_id>/', songView.get_song, name='get_song'),  
