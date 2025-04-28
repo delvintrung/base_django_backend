@@ -3,7 +3,7 @@ import datetime
 
 class Genre(Document):
     meta = {
-        'collection': 'genre',
+        'collection': 'genres',
         'strict': False
     }
 

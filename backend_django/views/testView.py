@@ -1,42 +1,58 @@
-import cloudinary
-from cloudinary.uploader import upload
+# users/views.py
+import os
+import requests
+from dotenv import load_dotenv
 from django.http import JsonResponse
-from ..models.song import Song
-from ..models.artist import Artist
-from ..models.user import User
 from django.views.decorators.csrf import csrf_exempt
-from ..models.album import Album
-import json
-from django.core.files.uploadedfile import UploadedFile
 
-# Function to upload files to Cloudinary
-@csrf_exempt
-def upload_to_cloudinary(file: UploadedFile, folder="songs/source"):
+# Tải các biến môi trường từ tệp .env
+load_dotenv()
+
+CLERK_API_KEY = os.getenv("CLERK_SECRET_KEY")
+CLERK_BASE_URL = "https://api.clerk.dev/v1"
+
+# Header cho API của Clerk
+headers = {
+    "Authorization": f"Bearer {CLERK_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+def get_admin_user():
     try:
-        result = cloudinary.uploader.upload(
-            file,
-            resource_type="auto",  # Automatically detect the resource type (image, video, etc.)
-            folder=folder  # Set the folder for the upload
-        )
-        # Return the secure URL of the uploaded file
-        print(result.get("secure_url"))
-        return result.get("secure_url")
-    except Exception as e:
-        print("Error uploading to Cloudinary:", e)
-        return None
-    
-# Endpoint for testing the file upload
-@csrf_exempt
-def test_upload(request):
-    if request.method == 'POST':
-        file = request.FILES.get('file')  # The key is 'file' from the form data
-        if not file:
-            return JsonResponse({'message': 'No file uploaded'}, status=400)
-
-        # Call the upload function to Cloudinary
-        url = upload_to_cloudinary(file)
+        url = f"{CLERK_BASE_URL}/users"
+        response = requests.get(url, headers=headers)
         
-        if url:
-            return JsonResponse({'message': 'Upload successful', 'url': url}, status=200)
+        # Kiểm tra status code của phản hồi
+        if response.status_code == 200:
+            users = response.json()
+            for user in users:
+                if user.get("email_addresses", [{}])[0].get("email_address") == os.getenv("ADMIN_EMAIL"):
+                    return user
+            return None
         else:
-            return JsonResponse({'message': 'Upload failed'}, status=500)
+            return None  
+    except Exception as e:
+        print(f"Error while fetching admin user: {str(e)}")
+        return None
+
+@csrf_exempt
+def check_admin_view(request):
+    if request.method != "":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+    try:
+        user = get_admin_user()
+        if user:
+            return JsonResponse({
+                "admin": True,
+                "message": "You are an admin",
+                "user_id": user["id"],
+                "email": user["email_addresses"][0]["email_address"],
+                "first_name": user["first_name"],
+                "last_name": user["last_name"]
+            })
+        else:
+            return JsonResponse({"admin": False, "message": "Admin user not found"}, status=404)
+
+    except Exception as e:
+        print(f"Error in check_admin_view: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
