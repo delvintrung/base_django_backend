@@ -5,14 +5,11 @@ class Song(Document):
     meta = {
         'collection': 'songs',
         'strict': False,
-<<<<<<< HEAD
         'indexes': [
             'title',
             'artist',
             'albumId',
         ]
-=======
->>>>>>> parent of b40a427 (Merge pull request #2 from delvintrung/phuoc)
     }
     title = StringField(required=True)
     artist = ReferenceField(Artist, required=True)

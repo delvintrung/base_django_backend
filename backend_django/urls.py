@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import artistView,favoriteView,userView,adminView,albumView,songView
+from .views import artistView,favoriteView,userView,adminViews,albumView,songView,authView
 
 from django.http import JsonResponse
 # from .views.authView import (
@@ -26,8 +26,8 @@ urlpatterns = [
 
     #user
     # Lấy tất cả user
-    # path('api/users/', userView.get_all_users),
-    # path('auth/callback/', authView.auth_callback, name='auth_callback'),
+    path('api/users/', userView.get_all_users),
+    path('auth/callback/', authView.auth_callback, name='auth_callback'),
     # path('users/update/<str:user_id>/', adminViews.update_user, name='update_user'),
     # path('users/delete/<str:user_id>/', adminViews.delete_user, name='delete_user'),
 
@@ -39,14 +39,14 @@ urlpatterns = [
     path('favorites/remove', favoriteView.remove_favorite),
     
     # playlist
-    path('api/playlist/', favoriteView.get_playlist),
-    path('api/playlist/create', favoriteView.create_playlist),
-    path('api/playlist/<str:playlist_id>/', favoriteView.get_playlist_detail),
+    # path('api/playlist/', favoriteView.get_playlist),
+    # path('api/playlist/create', favoriteView.create_playlist),
+    # path('api/playlist/<str:playlist_id>/', favoriteView.get_playlist_detail),
     
     # hiển thị danh sách bài đề cử
     path('api/songs/featured/', favoriteView.get_featured_songs),
     path('api/songs/made-for-you/', favoriteView.get_made_for_you_songs),
-    path('api/songs/trending/', favoriteView.get_trending_songs),
+    # path('api/songs/trending/', favoriteView.get_trending_songs),
     
     #album
     path('api/albums/', albumView.get_all_albums),
