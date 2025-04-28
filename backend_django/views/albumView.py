@@ -5,6 +5,12 @@ from ..models.song import Song
 from ..models.artist import Artist
 from bson import ObjectId
 import random
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from pymongo import MongoClient
+import os
+from datetime import datetime
 
 
 def serialize_document(doc):
@@ -113,4 +119,116 @@ def get_album_songs(request, album_id):
     except Album.DoesNotExist:
         return JsonResponse({'error': 'Album not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)  
+        return JsonResponse({'error': str(e)}, status=500)
+
+@api_view(['PUT'])
+def update_album(request, album_id):
+    try:
+        client = MongoClient(os.getenv("MONGO_URI"))
+        db = client['spotify']
+        albums_collection = db['albums']
+        
+        update_data = request.data
+        result = albums_collection.update_one(
+            {"_id": album_id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count > 0:
+            return Response({"message": "Cập nhật album thành công"}, status=status.HTTP_200_OK)
+        return Response({"message": "Không tìm thấy album"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+def delete_album(request, album_id):
+    try:
+        client = MongoClient(os.getenv("MONGO_URI"))
+        db = client['spotify']
+        albums_collection = db['albums']
+        
+        result = albums_collection.delete_one({"_id": album_id})
+        
+        if result.deleted_count > 0:
+            return Response({"message": "Xóa album thành công"}, status=status.HTTP_200_OK)
+        return Response({"message": "Không tìm thấy album"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def search_albums(request):
+    try:
+        query = request.GET.get('q', '')
+        client = MongoClient(os.getenv("MONGO_URI"))
+        db = client['spotify']
+        albums_collection = db['albums']
+        
+        albums = albums_collection.find({
+            "$or": [
+                {"title": {"$regex": query, "$options": "i"}},
+                {"artist": {"$regex": query, "$options": "i"}}
+            ]
+        })
+        
+        return Response(list(albums), status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_albums_by_artist(request, artist_id):
+    try:
+        client = MongoClient(os.getenv("MONGO_URI"))
+        db = client['spotify']
+        albums_collection = db['albums']
+        
+        albums = albums_collection.find({"artist_id": artist_id})
+        return Response(list(albums), status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_recently_added(request):
+    try:
+        client = MongoClient(os.getenv("MONGO_URI"))
+        db = client['spotify']
+        albums_collection = db['albums']
+        
+        albums = albums_collection.find().sort("created_at", -1).limit(20)
+        return Response(list(albums), status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def like_album(request, album_id):
+    try:
+        client = MongoClient(os.getenv("MONGO_URI"))
+        db = client['spotify']
+        likes_collection = db['album_likes']
+        
+        likes_collection.insert_one({
+            "user_id": request.user_info.get('sub'),
+            "album_id": album_id,
+            "created_at": datetime.utcnow()
+        })
+        
+        return Response({"message": "Đã thích album"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+def unlike_album(request, album_id):
+    try:
+        client = MongoClient(os.getenv("MONGO_URI"))
+        db = client['spotify']
+        likes_collection = db['album_likes']
+        
+        result = likes_collection.delete_one({
+            "user_id": request.user_info.get('sub'),
+            "album_id": album_id
+        })
+        
+        if result.deleted_count > 0:
+            return Response({"message": "Đã bỏ thích album"}, status=status.HTTP_200_OK)
+        return Response({"message": "Không tìm thấy lượt thích"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)  
