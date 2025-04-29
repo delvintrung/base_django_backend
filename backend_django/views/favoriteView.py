@@ -85,8 +85,10 @@ def add_to_favorite(request):
 @api_view(['DELETE'])
 def remove_favorite(request):
     try:
-        clerk_id = request.GET.get("clerkId")
-        song_id = request.GET.get("songId")
+        data = json.loads(request.body)
+        clerk_id = data.get("clerkId")
+        song_id = data.get("songId")
+
 
         if not clerk_id or not song_id:
             return Response({'error': 'Missing clerkId or songId'}, status=400)
