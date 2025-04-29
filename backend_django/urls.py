@@ -20,17 +20,15 @@ urlpatterns = [
     path('test-cors/', testView.test_cors, name='test-cors'),
 
     # Lấy danh sách bài hát
-    path('api/songs/', artistView.get_all_artists),
+    path('api/songs/', songView.get_all_songs),
     path('api/songs/create', songView.create_song),
     path('api/songs/<str:song_id>/', songView.get_song, name='get_song'),  
     path('api/songs/delete/<str:song_id>/', songView.delete_song, name='delete_song'),
-
+    # done
     #user
     # Lấy tất cả user
     path('api/users/', userView.get_all_users),
     path('auth/callback/', authView.auth_callback, name='auth_callback'),
-    # path('users/update/<str:user_id>/', adminViews.update_user, name='update_user'),
-    # path('users/delete/<str:user_id>/', adminViews.delete_user, name='delete_user'),
 
     # Lấy tin nhắn giữa current user và user khác (cần đăng nhập)
     path('api/users/messages/<int:user_id>/', userView.get_messages),
@@ -52,9 +50,8 @@ urlpatterns = [
     #album
     path('api/albums/', albumView.get_all_albums),
     path('api/albums/<str:album_id>/', albumView.get_album, name='get_album'),  
-    path('api/albums/create', adminViews.create_album),
-    path('api/songs/made-for-you', albumView.get_all_albums),
-    path('api/albums/<str:album_id>/songs', albumView.get_album_songs, name='get_album_songs'),
+    path('api/albums/create', albumView.create_album),
+    # done
     # nghệ sĩ
     path('artists/', artistView.get_all_artists),
     path('artists/create', adminViews.create_artist),
@@ -76,5 +73,4 @@ urlpatterns = [
     path("api/admin/albums/<str:album_id>", adminView.delete_album, name='admin_delete_album'),
     path('api/check-user/', testView.check_admin_view, name='check_user'),
     path("api/admin/playlists/<str:playlist_id>", adminView.delete_playlist, name='admin_delete_playlist'),
-
 ]

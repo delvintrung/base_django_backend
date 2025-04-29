@@ -5,14 +5,35 @@ from ..models.song import Song
 from ..models.artist import Artist
 from bson import ObjectId
 import random
-
+import json
+from datetime import datetime
+from bson import ObjectId
+from mongoengine import Document
 
 def serialize_document(doc):
-    """Chuyển đổi Document MongoEngine sang dict và ép _id thành string"""
-    d = doc.to_mongo().to_dict()
-    if '_id' in d:
-        d['_id'] = str(d['_id'])
-    return d    
+    if isinstance(doc, Document):
+        doc = doc.to_mongo().to_dict()
+
+    serialized = {}
+
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            serialized[key] = str(value)
+        elif isinstance(value, datetime):
+            serialized[key] = value.isoformat()
+        elif isinstance(value, Document):
+            serialized[key] = serialize_document(value)
+        elif isinstance(value, list):
+            serialized[key] = [
+                serialize_document(item) if isinstance(item, Document)
+                else str(item) if isinstance(item, ObjectId)
+                else item
+                for item in value
+            ]
+        else:
+            serialized[key] = value
+
+    return serialized
 
 @csrf_exempt
 def get_all_albums(request):
@@ -85,17 +106,25 @@ def create_album(request):
         if request.method != 'POST':
             return JsonResponse({'message': 'Method not allowed'}, status=405)
 
-        data = request.POST
-        name = data.get('name')
+        # Đọc dữ liệu JSON từ request body
+        data = json.loads(request.body)
+
+        # Lấy các trường từ dữ liệu
+        title = data.get('title')
         artistId = data.get('artistId')
         releaseYear = data.get('releaseYear')
-        coverImage = request.FILES.get('coverImage')
+        imageUrl = data.get('imageUrl')
 
+        # Kiểm tra nếu thiếu bất kỳ trường nào
+        if not title or not artistId or not releaseYear or not imageUrl:
+            return JsonResponse({'error': 'Missing required fields: title, artistId, releaseYear, imageUrl'}, status=400)
+
+        # Tạo album
         album = Album(
-            name=name,
-            artistId=ObjectId(artistId),
+            title=title,  # Lưu lại tên album vào trường 'title'
+            artist=ObjectId(artistId),  # Chuyển artistId thành ObjectId nếu cần
             releaseYear=releaseYear,
-            coverImage=coverImage
+            imageUrl=imageUrl
         )
         album.save()
 
