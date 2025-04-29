@@ -76,7 +76,7 @@ REST_FRAMEWORK = {
 
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',       # 1
+    # 'django.middleware.security.SecurityMiddleware',       # 1
     'corsheaders.middleware.CorsMiddleware',               # 2 — phải ngay sau Security
     'django.middleware.common.CommonMiddleware',           # 3
     'django.contrib.sessions.middleware.SessionMiddleware',
