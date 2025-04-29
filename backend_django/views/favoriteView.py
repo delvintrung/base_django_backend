@@ -102,7 +102,8 @@ def remove_favorite(request):
         return JsonResponse({'message': 'Favorite removed'}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
+    
+@csrf_exempt
 def get_featured_songs(request):
     try:
         db = get_db()
@@ -139,7 +140,8 @@ def get_featured_songs(request):
         return JsonResponse(songs, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-    
+
+@csrf_exempt    
 def get_made_for_you_songs(request):
     try:
         db = get_db()

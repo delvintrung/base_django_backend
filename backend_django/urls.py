@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import artistView,favoriteView,userView,adminViews,albumView,songView,authView
+from .views import artistView,favoriteView,userView,adminViews,albumView,songView,authView,adminView, testView, statView
 
 from django.http import JsonResponse
 # from .views.authView import (
@@ -17,6 +17,7 @@ def home(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('test-cors/', testView.test_cors, name='test-cors'),
 
     # Lấy danh sách bài hát
     path('api/songs/', artistView.get_all_artists),
