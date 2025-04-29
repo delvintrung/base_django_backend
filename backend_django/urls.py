@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import artistView,favoriteView,userView,adminViews,albumView,songView,authView,adminView, testView, statView
+from .views import artistView,favoriteView,userView,adminViews,albumView,songView,sampleData,authView,adminView, testView, statView
 
 from django.http import JsonResponse
 # from .views.authView import (
@@ -17,13 +17,19 @@ def home(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('test-cors/', testView.test_cors, name='test-cors'),
-
-    # Lấy danh sách bài hát
-    path('api/songs/', artistView.get_all_artists),
-    path('api/songs/create', songView.create_song),
-    path('api/songs/<str:song_id>/', songView.get_song, name='get_song'),  
-    path('api/songs/delete/<str:song_id>/', songView.delete_song, name='delete_song'),
+    # bài hát
+    path('api/songs/', songView.get_all_songs),
+    path('api/songs/create', songView.create_song), 
+    path('api/songs/create-sample', songView.create_sample_songs),
+    path('api/songs/<str:song_id>/', songView.get_song, name='get_song'),   
+    path('api/songs/delete/<str:song_id>/', songView.delete_song, name='delete_song'),  
+    path('api/songs/<str:song_id>/update', songView.update_song, name='update_song'),
+    path('api/songs/search', songView.search_songs, name='search_songs'),
+    path('api/songs/by-artist/<str:artist_id>/', songView.get_songs_by_artist, name='get_songs_by_artist'),
+    path('api/songs/by-genre/<str:genre>/', songView.get_songs_by_genre, name='get_songs_by_genre'),
+    path('api/songs/recently-played/', songView.get_recently_played, name='get_recently_played'),
+    path('api/songs/<str:song_id>/like', songView.like_song, name='like_song'),
+    path('api/songs/<str:song_id>/unlike', songView.unlike_song, name='unlike_song'),
 
     #user
     # Lấy tất cả user
@@ -53,7 +59,13 @@ urlpatterns = [
     path('api/albums/', albumView.get_all_albums),
     path('api/albums/<str:album_id>/', albumView.get_album, name='get_album'),  
     path('api/albums/create', adminViews.create_album),
-    path('api/songs/made-for-you', albumView.get_all_albums),
+    path('api/albums/<str:album_id>/update', albumView.update_album, name='update_album'),
+    path('api/albums/<str:album_id>/delete', albumView.delete_album, name='delete_album'),
+    path('api/albums/search', albumView.search_albums, name='search_albums'),
+    path('api/albums/by-artist/<str:artist_id>/', albumView.get_albums_by_artist, name='get_albums_by_artist'),
+    path('api/albums/recently-added/', albumView.get_recently_added, name='get_recently_added'),
+    path('api/albums/<str:album_id>/like', albumView.like_album, name='like_album'),
+    path('api/albums/<str:album_id>/unlike', albumView.unlike_album, name='unlike_album'),
     path('api/albums/<str:album_id>/songs', albumView.get_album_songs, name='get_album_songs'),
     # nghệ sĩ
     path('artists/', artistView.get_all_artists),
