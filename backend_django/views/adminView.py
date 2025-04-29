@@ -10,6 +10,7 @@ from django.core.files.base import ContentFile
 import cloudinary.api   
 import os
 from bson import ObjectId
+from django.conf import settings
 
 from ..models.song import Song
 from ..models.album import Album
@@ -351,4 +352,35 @@ def delete_album(request, album_id):
 
 @csrf_exempt
 def check_admin(request):
-    return JsonResponse({"admin": True}, status=200)
+    try:
+        # Giả sử `clerkId` được truyền qua request (ví dụ, trong JWT token hoặc headers)
+        clerk_id = request.user.clerkId  # Hoặc lấy clerkId từ request headers, v.v.
+
+        # Lấy người dùng từ cơ sở dữ liệu dựa trên clerkId
+        user = User.objects.get(clerkId=clerk_id)
+
+        # Kiểm tra xem email của người dùng có trùng với email admin không
+        is_admin = settings.ADMIN_EMAIL == user.primaryEmailAddress
+
+        if not is_admin:
+            return JsonResponse({
+                'admin': False,
+                'message': 'Unauthorized - bạn phải là admin'
+            }, status=403)
+
+        return JsonResponse({
+            'admin': True,
+            'message': 'Bạn là admin'
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            'admin': False,
+            'message': 'Không tìm thấy người dùng'
+        }, status=404)
+
+    except Exception as e:
+        return JsonResponse({
+            'admin': False,
+            'message': str(e)
+        }, status=500)
