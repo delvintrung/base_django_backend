@@ -2,21 +2,45 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from ..models.song import Song
 from ..models.artist import Artist
+from ..models.album import Album
 import random
 from bson import ObjectId
 from datetime import datetime
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from pymongo import MongoClient
-import os
+import json
 
-def serialize_document(doc):
-    """Chuyển đổi Document MongoEngine sang dict và ép _id thành string"""
-    d = doc.to_mongo().to_dict()
-    if '_id' in d:
-        d['_id'] = str(d['_id'])
-    return d    
+def serialize_document(song):
+    data = song.to_mongo().to_dict()
+    data['_id'] = str(data['_id'])
+
+    # Serialize artist
+    if song.artist:
+        artist = song.artist.fetch() if hasattr(song.artist, 'fetch') else song.artist
+        data['artist'] = {
+            "id": str(artist.id),
+            "name": artist.name,
+            "imageUrl": artist.imageUrl
+        }
+
+    # Serialize albumId (lookup Album từ ObjectId)
+    if song.albumId:
+        try:
+            album = Album.objects.get(id=song.albumId)
+            data['albumId'] = {
+                "_id": str(album.id),
+                "title": album.title,
+                "imageUrl": album.imageUrl,
+                "releaseYear": album.releaseYear
+            }
+        except Album.DoesNotExist:
+            data['albumId'] = str(song.albumId)
+
+    # ISO format cho datetime
+    if 'createdAt' in data and isinstance(data['createdAt'], datetime):
+        data['createdAt'] = data['createdAt'].isoformat()
+    if 'updatedAt' in data and isinstance(data['updatedAt'], datetime):
+        data['updatedAt'] = data['updatedAt'].isoformat()
+
+    return data
 
 @csrf_exempt
 def get_all_songs(request): 
@@ -66,14 +90,12 @@ def get_all_songs(request):
         print("Error in get_all_songs:", str(e))
         return JsonResponse({'error': str(e)}, status=500)
 
-
-
 @csrf_exempt
 def get_song(request, song_id):
     try:
-        song = Song.objects.get(id=ObjectId(song_id))
-        song_data = serialize_document(song)
-        return JsonResponse(song_data)
+        song = Song.objects.get(id=ObjectId(song_id))  # Tìm bài hát theo ObjectId
+        song_data = serialize_document(song)  # Chuyển bài hát thành dict JSON-compatible
+        return JsonResponse(song_data)  # Trả về JSON response
     except Song.DoesNotExist:
         return JsonResponse({'error': 'Song not found'}, status=404)
     except Exception as e:
@@ -103,51 +125,54 @@ def get_featured_songs(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
 @csrf_exempt
 def create_song(request):
     try:
         if request.method != 'POST':
             return JsonResponse({'message': 'Method not allowed'}, status=405)
 
-        data = request.POST
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = request.POST
+
         title = data.get('title')
-        artist = data.get('artist') 
+
+        artist_id = data.get('artist')
+
         albumId = data.get('albumId')
-        duration = data.get('duration') 
+        duration = data.get('duration')
         imageUrl = data.get('imageUrl')
         audioUrl = data.get('audioUrl')
 
+        required_fields = ['title', 'artist', 'albumId', 'duration', 'imageUrl', 'audioUrl']
+        missing = [f for f in required_fields if not data.get(f)]
+        if missing:
+            return JsonResponse({'error': f'Missing fields: {missing}'}, status=400)
+
+        artist = Artist.objects.get(id=ObjectId(artist_id))
+
         song = Song(
             title=title,
-            artist=Artist.objects.get(id=ObjectId(artist)),
+
+            artist=artist,
             albumId=ObjectId(albumId),
-            duration=duration,
+            duration=int(duration),
             imageUrl=imageUrl,
-            audioUrl=audioUrl,
-            createdAt=datetime.now(),
-            updatedAt=datetime.now()    
+            audioUrl=audioUrl
+
         )
         song.save()
 
         return JsonResponse({'message': 'Song created successfully', 'id': str(song.id)}, status=201)
+
+
     except Artist.DoesNotExist:
         return JsonResponse({'error': 'Artist not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@csrf_exempt
-def get_songs_by_artist(request, artist_id):
-    try:
-        artist = Artist.objects.get(id=ObjectId(artist_id))
-        songs = Song.objects.filter(artist=artist)
-        songs_data = [serialize_document(s) for s in songs]
-        return JsonResponse(songs_data, safe=False)
-    except Artist.DoesNotExist:
-        return JsonResponse({'error': 'Artist not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-@csrf_exempt
 def search_songs(request):
     try:
         query = request.GET.get('q', '')
@@ -172,9 +197,9 @@ def update_song(request, song_id):
         if 'title' in data:
             song.title = data['title']
         if 'artist' in data:
-            song.artist = Artist.objects.get(id=ObjectId(data['artist']))
-        if 'albumId' in data:
-            song.albumId = ObjectId(data['albumId'])
+
+            song.artist = ObjectId(data['artist'])
+
         if 'duration' in data:
             song.duration = data['duration']
         if 'imageUrl' in data:
@@ -208,152 +233,4 @@ def delete_song(request, song_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@csrf_exempt
-def create_sample_songs(request):
-    try:
-        # Tạo một số bài hát mẫu
-        sample_songs = [
-            {
-                'title': 'Song 1',
-                'artist': 'Artist 1',
-                'album': 'Album 1',
-                'duration': 180,
-                'imageUrl': 'https://example.com/song1.jpg',
-                'audioUrl': 'https://example.com/song1.mp3',
-                'createdAt': datetime.now(),
-                'updatedAt': datetime.now()
-            },
-            {
-                'title': 'Song 2',
-                'artist': 'Artist 2',
-                'albumId': 'Album 2',
-                'duration': 240,
-                'imageUrl': 'https://example.com/song2.jpg',
-                'audioUrl': 'https://example.com/song2.mp3',
-                'createdAt': datetime.now(),
-                'updatedAt': datetime.now()
-            }
-        ]
-        
-        for song_data in sample_songs:
-            song = Song(**song_data)
-            song.save()
-            
-        return JsonResponse({'message': 'Sample songs created successfully'}, status=201)
-    except Exception as e:
-        print("Error in create_sample_songs:", str(e))
-        return JsonResponse({'error': str(e)}, status=500)
 
-@api_view(['PUT'])
-def update_song(request, song_id):
-    try:
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify']
-        songs_collection = db['songs']
-        
-        update_data = request.data
-        result = songs_collection.update_one(
-            {"_id": song_id},
-            {"$set": update_data}
-        )
-        
-        if result.modified_count > 0:
-            return Response({"message": "Cập nhật bài hát thành công"}, status=status.HTTP_200_OK)
-        return Response({"message": "Không tìm thấy bài hát"}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET'])
-def search_songs(request):
-    try:
-        query = request.GET.get('q', '')
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify']
-        songs_collection = db['songs']
-        
-        songs = songs_collection.find({
-            "$or": [
-                {"title": {"$regex": query, "$options": "i"}},
-                {"artist": {"$regex": query, "$options": "i"}},
-                {"album": {"$regex": query, "$options": "i"}}
-            ]
-        })
-        
-        return Response(list(songs), status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET'])
-def get_songs_by_artist(request, artist_id):
-    try:
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify']
-        songs_collection = db['songs']
-        
-        songs = songs_collection.find({"artist_id": artist_id})
-        return Response(list(songs), status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET'])
-def get_songs_by_genre(request, genre):
-    try:
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify']
-        songs_collection = db['songs']
-        
-        songs = songs_collection.find({"genre": genre})
-        return Response(list(songs), status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET'])
-def get_recently_played(request):
-    try:
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify']
-        history_collection = db['play_history']
-        
-        # Lấy lịch sử phát nhạc của người dùng hiện tại
-        history = history_collection.find(
-            {"user_id": request.user_info.get('sub')}
-        ).sort("played_at", -1).limit(20)
-        
-        return Response(list(history), status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['POST'])
-def like_song(request, song_id):
-    try:
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify']
-        likes_collection = db['likes']
-        
-        likes_collection.insert_one({
-            "user_id": request.user_info.get('sub'),
-            "song_id": song_id,
-            "created_at": datetime.utcnow()
-        })
-        
-        return Response({"message": "Đã thích bài hát"}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['DELETE'])
-def unlike_song(request, song_id):
-    try:
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify']
-        likes_collection = db['likes']
-        
-        result = likes_collection.delete_one({
-            "user_id": request.user_info.get('sub'),
-            "song_id": song_id
-        })
-        
-        if result.deleted_count > 0:
-            return Response({"message": "Đã bỏ thích bài hát"}, status=status.HTTP_200_OK)
-        return Response({"message": "Không tìm thấy lượt thích"}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 

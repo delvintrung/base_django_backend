@@ -140,27 +140,6 @@ def check_premium_status(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-@api_view(['GET'])
-def check_admin_status(request):        
-    try:
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify_clone']
-        users_collection = db['users']
-        
-        user = users_collection.find_one({"clerkId": request.user_info.get('sub')})
-        if not user:
-            return Response(
-                {"message": "Không tìm thấy người dùng"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-            
-        return Response(
-            {"isAdmin": user.get('isAdmin', False)},
-            status=status.HTTP_200_OK
-        )
-        
-    except Exception as e:
-        return Response(
-            {"message": f"Lỗi: {str(e)}"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
