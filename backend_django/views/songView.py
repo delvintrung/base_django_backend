@@ -6,7 +6,6 @@ from ..models.album import Album
 import random
 from bson import ObjectId
 from datetime import datetime
-from bson import ObjectId
 import json
 
 def serialize_document(song):
@@ -139,7 +138,9 @@ def create_song(request):
             data = request.POST
 
         title = data.get('title')
+
         artist_id = data.get('artist')
+
         albumId = data.get('albumId')
         duration = data.get('duration')
         imageUrl = data.get('imageUrl')
@@ -154,15 +155,18 @@ def create_song(request):
 
         song = Song(
             title=title,
+
             artist=artist,
             albumId=ObjectId(albumId),
             duration=int(duration),
             imageUrl=imageUrl,
             audioUrl=audioUrl
+
         )
         song.save()
 
         return JsonResponse({'message': 'Song created successfully', 'id': str(song.id)}, status=201)
+
 
     except Artist.DoesNotExist:
         return JsonResponse({'error': 'Artist not found'}, status=404)
@@ -184,7 +188,7 @@ def search_songs(request):
 @csrf_exempt
 def update_song(request, song_id):
     try:
-        if request.method != 'PUT':
+        if request.method != 'PUT': 
             return JsonResponse({'message': 'Method not allowed'}, status=405)
 
         song = Song.objects.get(id=ObjectId(song_id))
@@ -193,7 +197,9 @@ def update_song(request, song_id):
         if 'title' in data:
             song.title = data['title']
         if 'artist' in data:
+
             song.artist = ObjectId(data['artist'])
+
         if 'duration' in data:
             song.duration = data['duration']
         if 'imageUrl' in data:
@@ -226,4 +232,5 @@ def delete_song(request, song_id):
         return JsonResponse({'error': 'Song not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
 

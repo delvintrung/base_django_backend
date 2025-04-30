@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import artistView,favoriteView,userView,adminViews,albumView,songView,authView,adminView, testView, statView
+from .views import artistView,favoriteView,userView,adminViews,albumView,songView,sampleData,authView,adminView, testView, statView
 
 from django.http import JsonResponse
 # from .views.authView import (
@@ -17,6 +17,7 @@ def home(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
     path('test-cors/', testView.test_cors, name='test-cors'),
 
     # Lấy danh sách bài hát
@@ -25,6 +26,7 @@ urlpatterns = [
     path('api/songs/<str:song_id>/', songView.get_song, name='get_song'),  
     path('api/songs/delete/<str:song_id>/', songView.delete_song, name='delete_song'),
     # done
+
     #user
     # Lấy tất cả user
     path('api/users/', userView.get_all_users),
@@ -50,6 +52,7 @@ urlpatterns = [
     #album
     path('api/albums/', albumView.get_all_albums),
     path('api/albums/<str:album_id>/', albumView.get_album, name='get_album'),  
+
     path('api/albums/create', albumView.create_album),
     # done
     # nghệ sĩ
