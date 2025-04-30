@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import artistView,favoriteView,userView,adminViews,albumView,songView,sampleData,authView,adminView, testView, statView
+from .views import artistView,favoriteView,userView,adminViews,albumView,songView,authView,adminView, testView, statView
 
 from django.http import JsonResponse
 # from .views.authView import (
