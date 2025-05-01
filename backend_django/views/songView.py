@@ -106,26 +106,36 @@ def get_featured_songs(request):
     try:
         all_songs = list(Song.objects.all())
         sampled_songs = random.sample(all_songs, min(6, len(all_songs)))
-
+        print("Sampled songs:", sampled_songs)
         result = []
         for song in sampled_songs:
-            artist = song.artist.fetch() if song.artist else None
-            album = song.albumId.fetch() if song.albumId else None
+            artist = None
+            if song.artist and ObjectId.is_valid(song.artist):
+                try:
+                    artist = song.artist.fetch()
+                except:
+                    artist = None
+
+            album = None
+            if song.albumId and ObjectId.is_valid(song.albumId):
+                try:
+                    album = song.albumId.fetch()
+                except:
+                    album = None
+
             result.append({
                 "_id": str(song.id),
                 "title": song.title,
                 "artist": serialize_document(artist) if artist else None,
-                "albumId": serialize_document(album) if album else None,          
+                "albumId": serialize_document(album) if album else None,
                 "imageUrl": song.imageUrl,
                 "audioUrl": song.audioUrl,
                 "duration": song.duration,
             })
 
-        return JsonResponse(result, safe=False) 
+        return JsonResponse(result, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-
 @csrf_exempt
 def create_song(request):
     try:

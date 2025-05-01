@@ -11,18 +11,19 @@ from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from datetime import datetime
 from bson import ObjectId 
 from django.shortcuts import get_object_or_404
+from django.core.exceptions import ObjectDoesNotExist
 import cloudinary.uploader
 from django.core.files.uploadedfile import UploadedFile
 from ..models.song import Song
 from django.views.decorators.http import require_http_methods
-from mongoengine.queryset.visitor import Q
-import random
-import traceback
+import mongoengine
 import os
 import requests
 from dotenv import load_dotenv
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from functools import wraps
+from rest_framework.decorators import api_view
 
 # Tải các biến môi trường từ tệp .env
 load_dotenv()
@@ -195,7 +196,8 @@ def create_song(request):
             )
             song.save()
             if  not album_id :
-                albums_collection.update_one(album_id,song.id)
+                albums_collection = Album._get_collection()
+                albums_collection.update_one({'_id': ObjectId(album_id)}, {'$push': {'songs': song.id}})
             
             song_data = {
                 "_id": str(song.id),
@@ -424,3 +426,57 @@ def get_admin_user():
     except Exception as e:
         print(f"Error while fetching admin user: {str(e)}")
         return None
+
+
+def check_admin(view_func):
+    @wraps(view_func)
+    @api_view(['GET'])
+    def wrapper(request, *args, **kwargs):
+        # Kiểm tra xem token có hợp lệ không
+        if not hasattr(request, 'auth') or not request.auth or not request.auth.get('userId'):
+            return JsonResponse(
+                {"admin": False, "message": "Unauthorized - you must be logged in"},
+                status=401
+            )
+
+        # Lấy userId từ token và gọi API Clerk để lấy thông tin người dùng
+        user_id = request.auth['userId']
+        clerk_api_key = os.getenv("CLERK_API_KEY")
+        url = f"https://api.clerk.dev/v1/users/{user_id}"  # Sử dụng API của Clerk để lấy thông tin người dùng
+
+        headers = {
+            "Authorization": f"Bearer {clerk_api_key}",
+        }
+
+        try:
+            response = requests.get(url, headers=headers)
+
+            if response.status_code == 200:
+                user = response.json()  # Dữ liệu người dùng từ Clerk
+                user_email = user['primary_email_address']['email_address']
+            else:
+                return JsonResponse(
+                    {"admin": False, "message": f"Error fetching user data: {response.text}"},
+                    status=500
+                )
+
+        except requests.exceptions.RequestException as e:
+            return JsonResponse(
+                {"admin": False, "message": f"Error fetching user data: {str(e)}"},
+                status=500
+            )
+
+        # Kiểm tra nếu email người dùng trùng với email của admin
+        is_admin = os.getenv("ADMIN_EMAIL") == user_email
+
+        # Nếu không phải admin, trả về lỗi 403
+        if not is_admin:
+            return JsonResponse(
+                {"admin": False, "message": "Unauthorized - you must be an admin"},
+                status=403
+            )
+
+        # Nếu là admin, tiếp tục gọi view
+        return view_func(request, *args, **kwargs)
+
+    return wrapper

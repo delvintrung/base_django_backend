@@ -38,3 +38,8 @@ def get_messages(request, user_id):
         return JsonResponse(messages_data, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def check_premium_status(request):
+    print(request, "check_premium_status")
+    return JsonResponse({"isPremium": "Chuaw có"}) 

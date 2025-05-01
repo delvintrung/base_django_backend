@@ -34,7 +34,6 @@ load_dotenv()  # Tự động đọc từ .env
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG") == "True"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
 
 # Application definition
@@ -46,10 +45,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',
     'rest_framework',
     'backend_django',
     "channels",
+    "corsheaders",
     
 ]
 
@@ -65,19 +64,19 @@ CHANNEL_LAYERS = {
 }
 
 REST_FRAMEWORK = {
-    # 'DEFAULT_AUTHENTICATION_CLASSES': [
-    #     'rest_framework_simplejwt.authentication.JWTAuthentication',
-    # ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ]
 }
 
 
-MIDDLEWARE = [
-    # 'django.middleware.security.SecurityMiddleware',       # 1
-    'corsheaders.middleware.CorsMiddleware',               # 2 — phải ngay sau Security
-    # 'django.middleware.common.CommonMiddleware',           # 3
+MIDDLEWARE = [         
+    "corsheaders.middleware.CorsMiddleware",
+    # "django.middleware.common.CommonMiddleware",   
+    'django.middleware.security.SecurityMiddleware',        
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -86,7 +85,11 @@ MIDDLEWARE = [
     ]
 
 # CORS_ALLOW_ALL_ORIGINS = True 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000" 
+    ]
+
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'backend_django.urls'
 
@@ -116,6 +119,8 @@ connect(
     db="spotify_clone",
     host=os.getenv("MONGO_URI"),
 )
+
+CLERK_API_KEY = os.getenv("CLERK_API_KEY")
 
 
 # Password validation
@@ -147,6 +152,8 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
+APPEND_SLASH = False
 
 
 # Static files (CSS, JavaScript, Images)

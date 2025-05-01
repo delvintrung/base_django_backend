@@ -40,7 +40,7 @@ def serialize_document(doc):
 
     return serialized
 
-@csrf_exempt
+# @csrf_exempt
 def get_all_albums(request):
     try:
         albums = Album.objects.all()
@@ -69,7 +69,12 @@ def get_all_albums(request):
             if 'songs' in album_dict:
                 album_dict['songs'] = [str(song_id) for song_id in album_dict['songs']]
             albums_data.append(album_dict)
-        return JsonResponse(albums_data, safe=False)
+        response = JsonResponse(albums_data, safe=False)
+        response["Access-Control-Allow-Origin"] = "http://localhost:3000"
+        response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "*"
+        return response
+        # return JsonResponse(albums_data, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
