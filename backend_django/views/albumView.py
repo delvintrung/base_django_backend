@@ -51,30 +51,17 @@ def get_all_albums(request):
             album_dict['_id'] = str(album_dict['_id'])
             # Xử lý trường artist
             if 'artist' in album_dict:
-                try:
-                    artist = album.artist.fetch()
-                    album_dict['artist'] = {
-                        '_id': str(artist.id),
-                        'name': artist.name,
-                        'imageUrl': artist.imageUrl
-                    }
-                except:
+                
+                artist = album.artist.fetch()
+                album_dict['artist'] = artist.name,
+                
                     # Nếu không tìm thấy artist, sử dụng thông tin mặc định
-                    album_dict['artist'] = {
-                        '_id': str(album_dict['artist']),
-                        'name': 'Unknown Artist',
-                        'imageUrl': ''
-                    }
+                    
             # Xử lý trường songs
             if 'songs' in album_dict:
                 album_dict['songs'] = [str(song_id) for song_id in album_dict['songs']]
             albums_data.append(album_dict)
-        response = JsonResponse(albums_data, safe=False)
-        response["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response["Access-Control-Allow-Headers"] = "*"
-        return response
-        # return JsonResponse(albums_data, safe=False)
+        return JsonResponse(albums_data, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
