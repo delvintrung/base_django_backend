@@ -101,7 +101,7 @@ api_urlpatterns  = [
     path('songs/delete/<str:song_id>', songView.delete_song, name='delete_song'),
     
     # ARTIST
-    path('artists/', artistView.get_all_artists),
+    path('artists', artistView.get_all_artists),
     path('admin/artists/create', adminView.create_artist),
     path('admin/artists/update/<str:artist_id>', adminView.update_artist, name='update_artist'),  
     path('admin/artists/delete/<str:artist_id>', adminView.delete_artist, name='delete_artist'),

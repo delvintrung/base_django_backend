@@ -51,12 +51,8 @@ def get_all_albums(request):
             album_dict['_id'] = str(album_dict['_id'])
             # Xử lý trường artist
             if 'artist' in album_dict:
-                
-                artist = album.artist.fetch()
-                album_dict['artist'] = artist.name,
-                
-                    # Nếu không tìm thấy artist, sử dụng thông tin mặc định
-                    
+                artist_name = album_dict['artist']
+                album_dict['artist'] = artist_name if artist_name else 'Unknown Artist'
             # Xử lý trường songs
             if 'songs' in album_dict:
                 album_dict['songs'] = [str(song_id) for song_id in album_dict['songs']]
@@ -68,14 +64,51 @@ def get_all_albums(request):
 @csrf_exempt
 def get_album(request, album_id):
     try:
+        # Lấy album theo ID
         album = Album.objects.get(id=ObjectId(album_id))
-        album_data = serialize_document(album)
+
+        # Preload tất cả bài hát trong mảng songs
+        song_ids = [song.id for song in album.songs if song]
+        songs = Song.objects(id__in=song_ids)
+
+        # Preload artists và albums cho các bài hát
+        artist_ids = [song.artist.id for song in songs if song.artist]
+        artists = Artist.objects(id__in=artist_ids)
+        artist_dict = {str(artist.id): artist for artist in artists}
+
+        album_ids = [song.albumId.id for song in songs if song.albumId]
+        albums = Album.objects(id__in=album_ids)
+        album_dict = {str(album.id): album for album in albums}
+
+        # Serialize từng bài hát
+        songs_data = []
+        for song in songs:
+            # Gán artist và albumId từ dictionary preload để tránh fetch()
+            song.artist = artist_dict.get(str(song.artist.id)) if song.artist else None
+            song.albumId = album_dict.get(str(song.albumId.id)) if song.albumId else None
+            # Serialize bài hát
+            song_data = serialize_document(song)
+            songs_data.append(song_data)
+
+        # Gán dữ liệu songs đã serialize vào album
+        album_dict = album.to_mongo().to_dict()
+        album_dict['_id'] = str(album_dict['_id'])
+        album_dict['songs'] = songs_data
+
+        # Preload artist của album
+        if album.artist:
+            album_dict['artist'] = serialize_document(album.artist)
+
+        # Serialize toàn bộ album
+        album_data = serialize_document(album_dict)
         return JsonResponse(album_data)
     except Album.DoesNotExist:
         return JsonResponse({'error': 'Album not found'}, status=404)
     except Exception as e:
+        print("Error in get_album:", str(e))
         return JsonResponse({'error': str(e)}, status=500)
-
+    
+    
 @csrf_exempt
 def get_featured_albums(request):
     try:
