@@ -354,28 +354,16 @@ def delete_album(request, album_id):
             return JsonResponse({"message": "Album not found"}, status=404)
 
 @api_view(['GET'])
-@permission_classes([AllowAny])  # Cho phép tất cả người dùng truy cập
+@permission_classes([IsAuthenticated])
 def check_admin(request):
     print("Checking admin status...")
     
-    user_email = request.GET.get('email')
-    
-    if not user_email:
-        return JsonResponse({"error": "Email không được cung cấp."}, status=400)
-
-    is_admin = user_email == settings.ADMIN_EMAIL
-    
-    print("User email:", user_email)
+    user = request.user
+    is_admin = user.primaryEmailAddress == settings.ADMIN_EMAIL
+    print("User email:", user.primaryEmailAddress)
     print("Admin email:", settings.ADMIN_EMAIL)
     print("Is admin:", is_admin)
-
-    if is_admin:
-        return JsonResponse({
-            "admin": is_admin,
-            "message": "Bạn là admin"
-        }, status=200)
-    else:
-        return JsonResponse({
-            "admin": is_admin,
-            "message": "Không phải admin"
-        }, status=403)
+    return JsonResponse({
+        "admin": is_admin,
+        "message": "Bạn là admin" if is_admin else "Không phải admin"
+    }, status=200 if is_admin else 403)
