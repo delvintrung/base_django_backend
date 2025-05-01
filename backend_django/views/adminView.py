@@ -11,12 +11,20 @@ import cloudinary.api
 import os
 from bson import ObjectId
 from django.conf import settings
-
 from ..models.song import Song
 from ..models.album import Album
 from ..models.artist import Artist
 from ..models.genre import Genre
 from ..models.user import User
+from rest_framework import authentication, exceptions
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from django.conf import settings
+from django.http import JsonResponse
+from dotenv import load_dotenv
+from rest_framework.decorators import authentication_classes
+from rest_framework.permissions import AllowAny
+load_dotenv()
 
 
 def upload_to_cloudinary(file, folder_name="others"):
@@ -94,7 +102,6 @@ def delete_user(request, user_id):
     except Exception as e:
         print("Error in delete_user:", e)
         return JsonResponse({"error": str(e)}, status=500)
-
 
 #artist
 #create artist
@@ -290,7 +297,6 @@ def update_song(request, song_id):
         except Song.DoesNotExist:
             return JsonResponse({"message": "Song not found"}, status=404)
 
-
 @csrf_exempt
 def delete_song(request, song_id):
     if request.method == 'DELETE':
@@ -309,7 +315,6 @@ def delete_song(request, song_id):
 
         except Song.DoesNotExist:
             return JsonResponse({"message": "Song not found"}, status=404)
-
 
 @csrf_exempt
 def create_album(request):
@@ -333,7 +338,6 @@ def create_album(request):
 
         return JsonResponse(album.to_json(), status=201)
 
-
 @csrf_exempt
 def delete_album(request, album_id):
     if request.method == 'DELETE':
@@ -349,38 +353,29 @@ def delete_album(request, album_id):
         except Album.DoesNotExist:
             return JsonResponse({"message": "Album not found"}, status=404)
 
-
-@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Cho phép tất cả người dùng truy cập
 def check_admin(request):
-    try:
-        # Giả sử `clerkId` được truyền qua request (ví dụ, trong JWT token hoặc headers)
-        clerk_id = request.user.clerkId  # Hoặc lấy clerkId từ request headers, v.v.
+    print("Checking admin status...")
+    
+    user_email = request.GET.get('email')
+    
+    if not user_email:
+        return JsonResponse({"error": "Email không được cung cấp."}, status=400)
 
-        # Lấy người dùng từ cơ sở dữ liệu dựa trên clerkId
-        user = User.objects.get(clerkId=clerk_id)
+    is_admin = user_email == settings.ADMIN_EMAIL
+    
+    print("User email:", user_email)
+    print("Admin email:", settings.ADMIN_EMAIL)
+    print("Is admin:", is_admin)
 
-        # Kiểm tra xem email của người dùng có trùng với email admin không
-        is_admin = settings.ADMIN_EMAIL == user.primaryEmailAddress
-
-        if not is_admin:
-            return JsonResponse({
-                'admin': False,
-                'message': 'Unauthorized - bạn phải là admin'
-            }, status=403)
-
+    if is_admin:
         return JsonResponse({
-            'admin': True,
-            'message': 'Bạn là admin'
-        })
-
-    except User.DoesNotExist:
+            "admin": is_admin,
+            "message": "Bạn là admin"
+        }, status=200)
+    else:
         return JsonResponse({
-            'admin': False,
-            'message': 'Không tìm thấy người dùng'
-        }, status=404)
-
-    except Exception as e:
-        return JsonResponse({
-            'admin': False,
-            'message': str(e)
-        }, status=500)
+            "admin": is_admin,
+            "message": "Không phải admin"
+        }, status=403)

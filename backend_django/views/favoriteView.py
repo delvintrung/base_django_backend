@@ -98,6 +98,7 @@ def remove_favorite(request):
             return Response({'error': 'Favorite not found'}, status=404)
 
         favorite.delete()
+        
         return Response({'message': 'Favorite removed'}, status=200)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
