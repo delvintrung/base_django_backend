@@ -35,6 +35,27 @@ headers = {
     "Authorization": f"Bearer {CLERK_API_KEY}",
     "Content-Type": "application/json"
 }
+
+# def token_required(f):
+#     @wraps(f)
+#     def decorated_function(request, *args, **kwargs):
+#         token = request.headers.get("Authorization")
+#         if not token:
+#             return JsonResponse({"error": "Authorization token is missing."}, status=401)
+
+#         response = requests.post(
+#             f"{CLERK_BASE_URL}/verify_token", 
+#             json={"token": token}, 
+#             headers=headers
+#         )
+
+#         # 4. Nếu API trả về lỗi hoặc token không hợp lệ, trả về lỗi 401
+#         if response.status_code != 200:
+#             return JsonResponse({"error": "Invalid or expired token."}, status=401)
+
+#         # 5. Nếu token hợp lệ, tiếp tục thực thi function view
+#         return f(request, *args, **kwargs)
+
 # 1
 @csrf_exempt
 def upload_to_cloudinary(file: UploadedFile, folder="songs/source"):
@@ -264,7 +285,6 @@ def createAlbum(request):
             createdAt=datetime.now(),
             updatedAt=datetime.now(),
         )
-
         # Trả về thông tin album
         album_data = {
             "_id": str(album.id),
@@ -276,7 +296,6 @@ def createAlbum(request):
             "createdAt": album.createdAt.isoformat() if hasattr(album, 'createdAt') else datetime.now().isoformat(),
             "updatedAt": album.updatedAt.isoformat() if hasattr(album, 'updatedAt') else datetime.now().isoformat(),
         }
-
         return JsonResponse(album_data, status=201) 
  
 
@@ -313,7 +332,6 @@ def createArtist(request):
 
         # Validate genres
         count=0
-        
         for gid in genre_ids:
             genre = Genre.objects.filter(id=ObjectId(gid)).first()
             if genre:
@@ -424,3 +442,51 @@ def get_admin_user():
     except Exception as e:
         print(f"Error while fetching admin user: {str(e)}")
         return None
+
+
+
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+def update_album(request, album_id):
+    if request.method == 'PUT':
+        request.upload_handlers = [TemporaryFileUploadHandler(request)]
+
+        try:
+            parser = MultiPartParser(request.META, request, request.upload_handlers)
+            data, files = parser.parse() 
+
+            title = data.get('title')
+            description = data.get('description')
+            avatar = files.get('avatar')  # File hình ảnh
+
+            # Kiểm tra hợp lệ ID
+            if not ObjectId.is_valid(playlist_id):
+                return JsonResponse({'error': 'Invalid playlist ID'}, status=400)
+
+            # Tìm playlist
+            playlist = Playlist.objects(id=playlist_id).first()
+            if not playlist:
+                return JsonResponse({'error': 'Playlist not found'}, status=404)
+
+            # Kiểm tra và cập nhật
+            if title is not None:
+                if not title.strip():
+                    return JsonResponse({'error': 'Title cannot be empty'}, status=400)
+                playlist.title = title
+
+            if description is not None:
+                playlist.description = description
+
+            if avatar:
+                # Gọi hàm upload lên Cloudinary hoặc nơi lưu khác
+                playlist.avatar_url = upload_to_cloudinary(avatar)
+
+            playlist.save()
+            return JsonResponse({'message': 'Playlist updated successfully'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid HTTP method'}, status=405)
