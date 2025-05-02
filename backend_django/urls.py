@@ -68,9 +68,7 @@ def home(request):
 api_urlpatterns  = [
     path('', home),
     
-    #ADMIN
-    path('admin/', admin.site.urls),
-    path('admin/check-admin', adminView.check_admin, name='check_admin'),
+    
 
     #USER
     path('users', userView.get_all_users),
@@ -82,6 +80,8 @@ api_urlpatterns  = [
 
     # PLAYLIST
     path('playlist', playlistView.get_playlist_by_id, name='get_playlist_by_id'),
+
+    
 
 
     # MESSAGE
@@ -112,8 +112,13 @@ api_urlpatterns  = [
 
     #STATS
     path('stats', statView.get_counts, name='get_countUserArtistsAlbumsSongs'),
+
+
+    # Admin
+    path('admin/check-admin',authView.check_admin, name='admin_check'),
+
+
     # #ADMIN
-    path('admin/check',adminView.check_admin, name='admin_check'),
     path("admin/create/songs", adminView.create_song ,name='admin_create_song'),
     path("admin/songs/<str:id>", adminView.update_song,name='admin_update_song'),
     path("admin/artists",adminView.createArtist,name='admin_create_artist'),
@@ -126,5 +131,6 @@ api_urlpatterns  = [
 
 
 urlpatterns = [
+    path('admin/', admin.site.urls),
     path('api/', include(api_urlpatterns)),
 ]

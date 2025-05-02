@@ -45,7 +45,7 @@ def get_me(request):
 
 # Fake middleware to simulate req.auth.userId (bạn có thể thay bằng JWT auth sau này)
 def get_fake_current_user_id(request):
-    clerk_id = request.resolver_match.kwargs.get('clerk_id')
+    clerk_id = request.auth.get('userId') 
     if not clerk_id:
         raise ValueError("Missing clerkId in request URL")
     
@@ -101,7 +101,7 @@ def get_messages(request, clerk_id):
 
 def get_user_by_user_id(request):
     try:
-        user_id = request.user.id 
+        user_id = request.auth.get('userId')  # Assuming the userId is retrieved from auth middleware
          # Assuming the userId is retrieved from auth middleware
         user = User.objects.filter(clerkId=user_id).first()
         
@@ -115,7 +115,7 @@ def get_user_by_user_id(request):
             'clerkId': user.clerkId,
             'createdAt': user.createdAt,
             'updatedAt': user.updatedAt,
-            'isPremium': user.isPremium,
+            'isPremium': user.isPremium if user.isPremium else False,
             # Add more fields as needed
         }
         
