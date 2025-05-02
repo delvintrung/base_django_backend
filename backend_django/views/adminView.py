@@ -451,42 +451,50 @@ def get_admin_user():
 @require_http_methods(["PUT"])
 def update_album(request, album_id):
     if request.method == 'PUT':
-        request.upload_handlers = [TemporaryFileUploadHandler(request)]
+        return JsonResponse({"message": "Method not allowed"}, status=405)
+    try :
+        album=Album.objects.get(id=ObjectId(album_id))
+    except Album.DoesNotExist :
+        return JsonResponse({"message": "Album not found"}, status =404)
+    try:
+        parser = MultiPartParser(request.META, request, request.upload_handlers)
+        data, files = parser.parse()
+    except MultiPartParserError:
+        return JsonResponse({"message": "Invalid form data"}, status=400)
+    title = data.get('title')
+    artist = data.get('artist')
+    releaseYear = data.get('releaseYear')
+    song_ids = request.POST.getlist("songIds[]")
+    image_file = request.FILES.get('imageFile')
+    if not all([title, releaseYear, image_file]):
+        return JsonResponse({"message": "Missing required fields"}, status=400)
+    if not title or not title.strip():
+            return JsonResponse({"message": "Album title is required"}, status=400)
+        
+    if not image_file:
+            return JsonResponse({"message": "Album artwork is required"}, status=400)
 
-        try:
-            parser = MultiPartParser(request.META, request, request.upload_handlers)
-            data, files = parser.parse() 
+    try:
+        release_year = int(releaseYear) 
+    except ValueError:
+        return JsonResponse({"message": "Invalid release year. Must be an integer"}, status=400)
 
-            title = data.get('title')
-            description = data.get('description')
-            avatar = files.get('avatar')  # File hình ảnh
+    current_year = datetime.now().year
+    if release_year < 1900 or release_year > current_year:
+        return JsonResponse({"message": f"Invalid release year. Must be between 1900 and {current_year}"}, status=400)
+    if not song_ids or len(song_ids) < 2:
+        return JsonResponse({"message": "At least 2 songs are required for an album"}, status=400)
 
-            # Kiểm tra hợp lệ ID
-            if not ObjectId.is_valid(playlist_id):
-                return JsonResponse({'error': 'Invalid playlist ID'}, status=400)
+    count = 0
+    for song_id in song_ids:
+        song = Song.objects.filter(id=ObjectId(song_id)).first()
+        if song:
+            count += 1
 
-            # Tìm playlist
-            playlist = Playlist.objects(id=playlist_id).first()
-            if not playlist:
-                return JsonResponse({'error': 'Playlist not found'}, status=404)
+    if count != len(song_ids):
+            return JsonResponse({'message': 'One or more song IDs are invalid'}, status=400)
 
-            # Kiểm tra và cập nhật
-            if title is not None:
-                if not title.strip():
-                    return JsonResponse({'error': 'Title cannot be empty'}, status=400)
-                playlist.title = title
-
-            if description is not None:
-                playlist.description = description
-
-            if avatar:
-                # Gọi hàm upload lên Cloudinary hoặc nơi lưu khác
-                playlist.avatar_url = upload_to_cloudinary(avatar)
-
-            playlist.save()
-            return JsonResponse({'message': 'Playlist updated successfully'}, status=200)
-
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-
-    return JsonResponse({'error': 'Invalid HTTP method'}, status=405)
+    imageUrl = upload_to_cloudinary(image_file)
+    if not imageUrl:
+        return JsonResponse({"message": "Error uploading image to Cloudinary"}, status=500)
+    album.save()
