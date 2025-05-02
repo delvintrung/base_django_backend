@@ -33,6 +33,7 @@ load_dotenv()  # Tự động đọc từ .env
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG") == "True"
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 
 
@@ -65,7 +66,7 @@ CHANNEL_LAYERS = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
@@ -82,6 +83,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'backend_django.middleware.ClerkAuthMiddleware.ClerkAuthMiddleware'
     ]
 
 # CORS_ALLOW_ALL_ORIGINS = True     

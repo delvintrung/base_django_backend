@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, DateTimeField
+from mongoengine import Document, StringField, DateTimeField, BooleanField
 import datetime
 
 class User(Document):
@@ -15,6 +15,7 @@ class User(Document):
     clerkId = StringField(required=True, unique=True)
     createdAt = DateTimeField(default=datetime.datetime.utcnow)
     updatedAt = DateTimeField(default=datetime.datetime.utcnow)
+    isPremium = BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         """Tự động cập nhật updatedAt mỗi lần save."""

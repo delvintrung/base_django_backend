@@ -5,7 +5,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from pymongo import MongoClient
 import os
+import json
+from ..models.user import User
 from datetime import datetime
+from django.conf import settings
 
 
 
@@ -25,69 +28,41 @@ def public_view(request):
 @api_view(['POST'])
 @csrf_exempt
 def auth_callback(request):
-    try:
-        # Lấy thông tin người dùng từ request
-        user_data = request.data
-        clerk_id = user_data.get('id')
-        
-        if not clerk_id:
-            return Response(
-                {"message": "Thiếu thông tin người dùng"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Kết nối MongoDB
-        client = MongoClient(os.getenv("MONGO_URI"))
-        db = client['spotify_clone']
-        users_collection = db['users']
-
-        # Kiểm tra xem người dùng đã tồn tại chưa
-        existing_user = users_collection.find_one({"clerkId": clerk_id})
-        
-        if existing_user:
-            # Cập nhật thông tin người dùng nếu cần
-            users_collection.update_one(
-                {"clerkId": clerk_id},
-                {
-                    "$set": {
-                        "fullName": user_data.get('firstName', '') + ' ' + user_data.get('lastName', ''),
-                        "imageUrl": user_data.get('imageUrl', ''),
-                        "email": user_data.get('email', ''),
-                        "updatedAt": datetime.utcnow()
-                    }
-                }
-            )
-            existing_user['_id'] = str(existing_user['_id'])
-            return Response(
-                {"message": "Đăng nhập thành công", "user": existing_user},
-                status=status.HTTP_200_OK
-            )
-        else:
-            # Tạo người dùng mới
-            new_user = {
-                "clerkId": clerk_id,
-                "fullName": user_data.get('firstName', '') + ' ' + user_data.get('lastName', ''),
-                "imageUrl": user_data.get('imageUrl', ''),
-                "email": user_data.get('email', ''),
-                "isPremium": False,
-                "isAdmin": False,
-                "createdAt": datetime.utcnow(),
-                "updatedAt": datetime.utcnow()
-            }
+    if request.method == 'POST':
+        try:
             
-            result = users_collection.insert_one(new_user)
-            new_user['_id'] = str(result.inserted_id)
-            
-            return Response(
-                {"message": "Tạo tài khoản thành công", "user": new_user},
-                status=status.HTTP_201_CREATED
-            )
+            data = json.loads(request.body)
 
-    except Exception as e:
-        return Response(
-            {"message": f"Lỗi: {str(e)}"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+            clerk_id = data.get("id")
+            first_name = data.get("firstName", "")
+            last_name = data.get("lastName", "")
+            image_url = data.get("imageUrl", "")
+
+            if not clerk_id or not image_url:
+                return JsonResponse({"success": False, "message": "Missing required fields"}, status=400)
+
+            full_name = f"{first_name} {last_name}".strip()
+
+            # Kiểm tra tồn tại
+            user = User.objects(clerkId=clerk_id).first()
+            print(user)
+
+            if not user:
+                # Tạo mới nếu chưa có
+                User(
+                    clerkId=clerk_id,
+                    fullName=full_name,
+                    imageUrl=image_url
+                ).save()
+
+            return JsonResponse({"success": True}, status=200)
+
+        except Exception as e:
+            print("Error in auth_callback:", e)
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
 
 @api_view(['GET'])
 def get_current_user(request):
@@ -141,5 +116,33 @@ def check_premium_status(request):
         )
 
 
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+@csrf_exempt
+# @api_view(['GET'])
+def check_admin(request):
+    try:
+        email= request.auth.get('email')
+        # Kiểm tra xem email của người dùng có trùng với email admin không
+        is_admin = settings.ADMIN_EMAIL == email
+        if not is_admin:
+            return JsonResponse({
+                'admin': False,
+                'message': 'Unauthorized - bạn phải là admin'
+            }, status=403)
+
+        return JsonResponse({
+            'admin': True,
+            'message': 'Bạn là admin'
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            'admin': False,
+            'message': 'Không tìm thấy người dùng'
+        }, status=404)
+
+    except Exception as e:
+        return JsonResponse({
+            'admin': False,
+            'message': str(e)
+        }, status=500)
 
