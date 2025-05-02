@@ -79,8 +79,11 @@ api_urlpatterns  = [
     path('users/buy-premium', userView.buy_premium_success, name='buy_premium_success'),
 
     # PLAYLIST
-    path('playlist', playlistView.get_playlist_by_id, name='get_playlist_by_id'),
-
+    path('playlists', playlistView.get_all_playlist, name='get_all_playlist'),
+    path('playlists/create', playlistView.create_playlist, name='create_playlist'),
+    path('playlists/<str:playlist_id>', playlistView.get_playlist_by_id, name='get_playlist_by_id'),
+    path('playlists/<str:playlist_id>', playlistView.update_playlist, name='update_playlist'),
+    path('playlists/<str:playlist_id>/add-song', playlistView.add_song_to_playlist, name='add_song_to_playlist'),
     
 
 
