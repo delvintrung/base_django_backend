@@ -1,5 +1,8 @@
-from mongoengine import Document, StringField, ListField, ReferenceField
+from mongoengine import Document, StringField, DateTimeField, EmbeddedDocument, EmbeddedDocumentListField, ObjectIdField, ListField
 import datetime
+
+class Song(EmbeddedDocument):
+    _id = ObjectIdField()
 
 class Playlist(Document):
     meta = {
@@ -10,7 +13,7 @@ class Playlist(Document):
     title = StringField(required=True)
     avatar = StringField()
     clerkId = StringField(required=True)
-    songs = ListField(ReferenceField('Song'))
+    songs = ListField(ObjectIdField())
 
     createdAt = StringField(default=lambda: datetime.datetime.utcnow().isoformat())
     updatedAt = StringField(default=lambda: datetime.datetime.utcnow().isoformat())

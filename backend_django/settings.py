@@ -14,9 +14,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 from mongoengine import connect
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,8 +33,8 @@ load_dotenv()  # Tự động đọc từ .env
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG") == "True"
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
 
 # Application definition
@@ -49,11 +46,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'api',
     'rest_framework',
     'backend_django',
     "channels",
-    'corsheaders',
+    "corsheaders",
+    
 ]
 
 ASGI_APPLICATION = "backend_django.asgi.application"
@@ -69,7 +66,7 @@ CHANNEL_LAYERS = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
@@ -77,18 +74,42 @@ REST_FRAMEWORK = {
 }
 
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
+MIDDLEWARE = [         
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",   
+    'django.middleware.security.SecurityMiddleware',        
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'backend_django.middleware.ClerkAuthMiddleware.ClerkAuthMiddleware'
+    ]
+
+# CORS_ALLOW_ALL_ORIGINS = True     
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
 ]
-CORS_ALLOW_ALL_ORIGINS = True 
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "origin",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
 ROOT_URLCONF = 'backend_django.urls'
 
 TEMPLATES = [
@@ -107,6 +128,7 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'backend_django.wsgi.application'
 
 
@@ -116,6 +138,8 @@ connect(
     db="spotify_clone",
     host=os.getenv("MONGO_URI"),
 )
+
+CLERK_API_KEY = os.getenv("CLERK_API_KEY")
 
 
 # Password validation
@@ -136,16 +160,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Cloudinary settings
-cloudinary.config(
-  cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),  # Your Cloudinary cloud name
-  api_key=os.getenv("CLOUDINARY_API_KEY"),        # Your Cloudinary API key
-  api_secret=os.getenv("CLOUDINARY_API_SECRET")   # Your Cloudinary API secret
-)
-
-# Default file storage using Cloudinary
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -157,6 +171,8 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
+# APPEND_SLASH = False
 
 
 # Static files (CSS, JavaScript, Images)

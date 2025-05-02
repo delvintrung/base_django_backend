@@ -4,6 +4,8 @@ import requests
 from dotenv import load_dotenv
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 # Tải các biến môi trường từ tệp .env
 load_dotenv()
@@ -56,3 +58,7 @@ def check_admin_view(request):
     except Exception as e:
         print(f"Error in check_admin_view: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
+    
+@api_view(['GET', 'OPTIONS'])
+def test_cors(request):
+    return Response({"message": "CORS test endpoint"})

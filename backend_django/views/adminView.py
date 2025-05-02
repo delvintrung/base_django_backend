@@ -3,7 +3,8 @@ from django.views.decorators.csrf import csrf_exempt
 from ..models.artist import Artist
 from ..models.album import Album
 from ..models.playlist import Playlist
-from ..models.genre import Genre    
+from ..models.genre import Genre 
+from ..models.user import User   
 import json
 from django.http import QueryDict
 from django.http.multipartparser import MultiPartParser, MultiPartParserError
@@ -11,18 +12,21 @@ from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from datetime import datetime
 from bson import ObjectId 
 from django.shortcuts import get_object_or_404
+from django.core.exceptions import ObjectDoesNotExist
 import cloudinary.uploader
 from django.core.files.uploadedfile import UploadedFile
 from ..models.song import Song
 from django.views.decorators.http import require_http_methods
-from mongoengine.queryset.visitor import Q
-import random
-import traceback
+import mongoengine
 import os
 import requests
 from dotenv import load_dotenv
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from functools import wraps
+from rest_framework.decorators import api_view
+from django.conf import settings
+from django.http import JsonResponse
 
 # Tải các biến môi trường từ tệp .env
 load_dotenv()
@@ -216,7 +220,8 @@ def create_song(request):
             )
             song.save()
             if  not album_id :
-                albums_collection.update_one(album_id,song.id)
+                albums_collection = Album._get_collection()
+                albums_collection.update_one({'_id': ObjectId(album_id)}, {'$push': {'songs': song.id}})
             
             song_data = {
                 "_id": str(song.id),
