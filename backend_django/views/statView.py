@@ -65,7 +65,7 @@ def token_required(f):
 
 
 @csrf_exempt
-@token_required
+# @token_required   
 def get_counts(request):
     try:
         album_count = Album.objects.count()

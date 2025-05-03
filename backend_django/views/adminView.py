@@ -251,7 +251,7 @@ def update_song(request, id):
 # # 5
 @csrf_exempt
 @require_http_methods(["POST"])
-def create_song(request):
+def create_songadmin(request):
     if request.method == 'POST':
         try:
             title = request.POST.get('title')
@@ -261,8 +261,18 @@ def create_song(request):
             audio_file = request.FILES.get('audioFile')  
             image_file = request.FILES.get('imageFile')  
         
-            if not all([title, duration, audio_file, image_file]):
-                return JsonResponse({"message": "Missing required fields"}, status=400)
+            missing_fields = []
+            if not title:
+                missing_fields.append("title")
+            if not duration:
+                missing_fields.append("duration")
+            if not audio_file:
+                missing_fields.append("audioFile")
+            if not image_file:
+                missing_fields.append("imageFile")
+
+            if missing_fields:
+                return JsonResponse({"message": f"Missing required fields: {', '.join(missing_fields)}"}, status=400)
             imageUrl = upload_to_cloudinary(image_file)
             if not imageUrl:
                 return JsonResponse({"message": "Error uploading image to Cloudinary"}, status=500)
@@ -280,7 +290,7 @@ def create_song(request):
                 updatedAt=datetime.now(),
             )
             song.save()
-            if  not album_id :
+            if album_id and album_id not in ('', 'null'):
                 albums_collection = Album._get_collection()
                 albums_collection.update_one({'_id': ObjectId(album_id)}, {'$push': {'songs': song.id}})
             album_intance = None
@@ -294,7 +304,7 @@ def create_song(request):
             song_data = {
                 "_id": str(song.id),
                 "title": song.title,
-                "artist": str(album.artist.id) if album.artist else None,
+                "artist": str(song.artist),
                 "audioUrl": song.audioUrl,
                 "imageUrl": song.imageUrl,
                 "duration": song.duration,
@@ -407,11 +417,22 @@ def createArtist(request):
 
         # Validate genres
         count=0
-        
         for gid in genre_ids:
+            # try:
+            #     print(f"Trying genre id: {gid}")
+            #     genre = Genre.objects.filter(id=ObjectId(gid)).first()
+            #     if not genre:
+            #         print(f"Genre with id {gid} not found.")
+            #     else:
+            #         print(f"Genre found: {genre}")
+            # except Exception as e:
+            #     print(f"Error with gid {gid}: {e}")
+            # # print(gid)
             genre = Genre.objects.filter(id=ObjectId(gid)).first()
+            print(genre)
             if genre:
                 count+=1
+                print(count)    
         if count !=  len(genre_ids):
              return JsonResponse({'message': 'One or more genre IDs are invalid'}, status=400)
         image_url = ""

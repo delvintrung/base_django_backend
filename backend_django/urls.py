@@ -118,16 +118,16 @@ api_urlpatterns  = [
 
 
     # #ADMIN
-    path("admin/create/songs", adminView.create_song ,name='admin_create_song'),
-    path("admin/songs/<str:id>", adminView.update_song,name='admin_update_song'),
+    path("admin/create/songs", adminView.create_songadmin ,name='admin_create_song'),
+    path("admin/update/songs/<str:id>", adminView.update_song,name='admin_update_song'),
     path("admin/artists",adminView.createArtist,name='admin_create_artist'),
-    path("admin/songs/delete/<str:song_id>", adminView.delete_song ,name='admin_delete_song'),
-    path("admin/albums", adminView.createAlbum ,name='admin_create_album'),
-    path("admin/albums/update/<str:album_id>", adminView.update_albumadmin ,name='adminupdatealbum'),
-    path("admin/albums/<str:album_id>", adminView.delete_album, name='admin_delete_album'),
+    path("admin/delete/songs/<str:song_id>", adminView.delete_song ,name='admin_delete_song'),
+    path("admin/create/albums", adminView.createAlbum ,name='admin_create_album'),
+    path("admin/update/albums/<str:album_id>", adminView.update_albumadmin ,name='adminupdatealbum'),
+    path("admin/delete/albums/<str:album_id>", adminView.delete_album, name='admin_delete_album'),
     path('check-user', testView.check_admin_view, name='check_user'),
-    path("admin/playlists/<str:playlist_id>", adminView.delete_playlist, name='admin_delete_playlist'),
-    path("admin/playlists/update/<str:playlist_id>", adminView.update_playlist, name='admin_update_playlist'),
+    path("admin/delete/playlists/<str:playlist_id>", adminView.delete_playlist, name='admin_delete_playlist'),
+    path("admin/update/playlists/<str:playlist_id>", adminView.update_playlist, name='admin_update_playlist'),
 ]
 
 
