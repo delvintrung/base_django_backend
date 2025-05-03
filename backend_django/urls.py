@@ -3,6 +3,7 @@ from django.urls import path, include
 from .views import artistView,favoriteView,userView,albumView,songView,authView,adminView, testView, statView, playlistView,adminPlusView
 
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 # from .views.authView import (
 #     auth_callback, 
 #     get_current_user, 
@@ -42,7 +43,7 @@ api_urlpatterns  = [
 
     # MESSAGE
     path('users/messages/<str:clerk_id>', userView.get_messages,name='get_messages'),
-    
+    path('users/messages/send/', csrf_exempt(userView.send_message)),
     #FAVORITE
     path('favorites/favorite', favoriteView.get_favorite_by_id,name='get_favorite_by_id'),
     path('favorites/add', favoriteView.add_to_favorite,name='add_to_favorite'),
