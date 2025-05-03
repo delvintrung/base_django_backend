@@ -82,6 +82,83 @@ def delete_song(request, song_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 # 4
+# @csrf_exempt
+# @require_http_methods(["PUT"])
+# def update_song(request, id):
+#     if request.method != 'PUT':
+#         return JsonResponse({"message": "Method not allowed"}, status=405)
+
+#     try:
+#         song = Song.objects.get(id=ObjectId(id))
+#     except Song.DoesNotExist:
+#         return JsonResponse({"message": "Song not found"}, status=404)
+
+#     request.upload_handlers = [TemporaryFileUploadHandler(request)]
+#     try:
+#         parser = MultiPartParser(request.META, request, request.upload_handlers)
+#         data, files = parser.parse()
+#     except MultiPartParserError:
+#         return JsonResponse({"message": "Invalid form data"}, status=400)
+
+#     title = data.get('title')
+#     artist = data.get('artist')
+#     duration = data.get('duration')
+#     album_id = data.get('albumId')
+
+#     audio_file = files.get('audioUrl')
+#     image_file = files.get('imageUrl')
+
+#     if audio_file:
+#         song.audioUrl = upload_to_cloudinary(audio_file)
+
+#     if image_file:
+#         song.imageUrl = upload_to_cloudinary(image_file)
+
+#     if title:
+#         song.title = title
+#     if artist:
+#         artist_obj = Artist.objects.get(id=ObjectId(artist))  # Tìm Artist từ ObjectId
+#         song.artist = artist_obj
+#     if duration:
+#         song.duration = duration
+#     album_id_value = str(song.albumId) if song.albumId else None 
+#     print(album_id_value)
+#     if album_id:
+#         # id có thay đổi
+#         if str(album_id) != album_id_value:
+#             if album_id_value:
+#                 old_album = Album.objects.filter(id=ObjectId(album_id_value)).first()
+#                 if old_album:
+#                     old_album.songs.remove(song)
+#                     old_album.updatedAt = datetime.now() 
+#                     old_album.save() 
+#             new_album = Album.objects.filter(id=ObjectId(album_id)).first()
+#             if new_album:
+#                 new_album.songs.append(song)
+#                 new_album.updatedAt = datetime.now() 
+#                 new_album.save() 
+#             song.albumId = new_album.id
+
+#     else:
+#         if str(album_id) !=  album_id_value:
+#             old_album = Album.objects.filter(id=ObjectId(song.albumId.id)).first()
+#             if old_album:
+#                 old_album.songs.remove(song)
+#                 old_album.updatedAt = datetime.now()  
+#                 old_album.save() 
+
+#     song.save()
+#     return JsonResponse({
+#         "_id": str(song["id"]),
+#         "title": song["title"],
+#         "artist": str(song["artist"]), 
+#         "audio_url": song["audioUrl"],
+#         "image_url": song["imageUrl"],
+#         "duration": song["duration"],
+#         "updatedAt":song["updatedAt"],
+    
+# }, status=200)
+ 
 @csrf_exempt
 @require_http_methods(["PUT"])
 def update_song(request, id):
@@ -116,55 +193,60 @@ def update_song(request, id):
 
     if title:
         song.title = title
+
     if artist:
-        artist_obj = Artist.objects.get(id=ObjectId(artist))  # Tìm Artist từ ObjectId
-        song.artist = artist_obj
+        try:
+            artist_obj = Artist.objects.get(id=ObjectId(artist))
+            song.artist = artist_obj
+        except Artist.DoesNotExist:
+            return JsonResponse({"message": "Artist not found"}, status=404)
+
     if duration:
         song.duration = duration
-    try:
-        if song.albumId and song.albumId.id:
-            album_id_value = str(song.albumId.id)
-        else:
-            album_id_value = "" 
-    except mongoengine.errors.DoesNotExist:
-        album_id_value = ""  
+
+    old_album_id = str(song.albumId) if song.albumId else None
 
     if album_id:
-        # id có thay đổi
-        if str(album_id) != album_id_value:
-            if album_id_value:
-                old_album = Album.objects.filter(id=ObjectId(album_id_value)).first()
-                if old_album:
-                    old_album.songs.remove(song)
-                    old_album.updatedAt = datetime.now() 
-                    old_album.save() 
+        if album_id != old_album_id:
+            # Xóa khỏi album cũ
+            if old_album_id:
+                old_album = Album.objects.filter(id=ObjectId(old_album_id)).first()
+                if old_album and song.id in old_album.songs:
+                    old_album.songs.remove(song.id)
+                    old_album.updatedAt = datetime.now()
+                    old_album.save()
+
+            # Thêm vào album mới
             new_album = Album.objects.filter(id=ObjectId(album_id)).first()
             if new_album:
-                new_album.songs.append(song)
-                new_album.updatedAt = datetime.now() 
-                new_album.save() 
-            song.albumId = new_album.id
-
+                if song.id not in new_album.songs:
+                    new_album.songs.append(song.id)
+                    new_album.updatedAt = datetime.now()
+                    new_album.save()
+                song.albumId = new_album.id
     else:
-        if str(album_id) !=  album_id_value:
-            old_album = Album.objects.filter(id=ObjectId(song.albumId.id)).first()
-            if old_album:
-                old_album.songs.remove(song)
-                old_album.updatedAt = datetime.now()  
-                old_album.save() 
+        # Nếu album_id bị xóa (set None)
+        if old_album_id:
+            old_album = Album.objects.filter(id=ObjectId(old_album_id)).first()
+            if old_album and song.id in old_album.songs:
+                old_album.songs.remove(song.id)
+                old_album.updatedAt = datetime.now()
+                old_album.save()
+            song.albumId = None
 
+    song.updatedAt = datetime.now()
     song.save()
+
     return JsonResponse({
-        "_id": str(song["id"]),
-        "title": song["title"],
-        "artist": str(song["artist"]), 
-        "audio_url": song["audioUrl"],
-        "image_url": song["imageUrl"],
-        "duration": song["duration"],
-        "updatedAt":song["updatedAt"],
-    
-}, status=200)
- 
+        "_id": str(song.id),
+        "title": song.title,
+        "artist": str(song.artist.id),
+        "audio_url": song.audioUrl,
+        "image_url": song.imageUrl,
+        "duration": song.duration,
+        "albumId": str(song.albumId) if song.albumId else None,
+        "updatedAt": song.updatedAt.isoformat(),
+    }, status=200)
 
 # # 5
 @csrf_exempt
@@ -201,15 +283,22 @@ def create_song(request):
             if  not album_id :
                 albums_collection = Album._get_collection()
                 albums_collection.update_one({'_id': ObjectId(album_id)}, {'$push': {'songs': song.id}})
-            
+            album_intance = None
+            if album_id and album_id not in ('', 'null'):
+                    try:
+                        album_instance = Album.objects.get(id=album_id)
+                    except Album.DoesNotExist:
+                        return JsonResponse({"message": "Album not found"}, status=404)
+
+            print(album_id)
             song_data = {
                 "_id": str(song.id),
                 "title": song.title,
-                "artist": str(song.artist.id),   # Giả sử artist có thuộc tính name
+                "artist": str(artist_id) if artist_id else None,
                 "audioUrl": song.audioUrl,
                 "imageUrl": song.imageUrl,
                 "duration": song.duration,
-                "albumId": str(song.albumId.id) if song.albumId else None,
+                "albumId": album_id,
                 "createdAt": song.createdAt.isoformat(),
                 "updatedAt": song.updatedAt.isoformat(),
             }
@@ -274,7 +363,7 @@ def createAlbum(request):
         album_data = {
             "_id": str(album.id),
             "title": album.title,
-            "artist": album.artist,
+            "artist": str(album.artist.id) if album.artist else None,
             "imageUrl": album.imageUrl,
             "releaseYear": album.releaseYear,
             "songs": [str(song.id) for song in album.songs],  
@@ -430,336 +519,427 @@ def get_admin_user():
         print(f"Error while fetching admin user: {str(e)}")
         return None
 
-
-
-
-def upload_to_cloudinary(file, folder_name="others"):
-    try:
-        result = cloudinary.uploader.upload(
-            file,
-            folder=f"{folder_name}",
-            resource_type="auto"
-        )
-        return result['secure_url']
-    except Exception as e:
-        print("Error in uploadToCloudinary:", e)
-        raise Exception("Error uploading to cloudinary")
-
-#user
-#update user
 @csrf_exempt
-def update_user(request, user_id):
-    if request.method != "PUT":
-        return JsonResponse({"error": "Only PUT allowed"}, status=405)
+@require_http_methods(["PUT"])
+def update_albumadmin(request, album_id):
+    try:
+        album = Album.objects.get(id=ObjectId(album_id))
+    except Album.DoesNotExist:
+        return JsonResponse({"message": "Album not found"}, status=404)
 
     try:
-        user = User.objects.get(id=user_id)
-        data = json.loads(request.body)
+        parser = MultiPartParser(request.META, request, request.upload_handlers)
+        data, files = parser.parse()
+    except MultiPartParserError:
+        return JsonResponse({"message": "Invalid form data"}, status=400)
 
-        full_name = data.get("fullName", user.fullName)
-        clerk_id = data.get("clerkId", user.clerkId)
+    title = data.get('title')
+    artist_id = data.get('artist')
+    release_year = data.get('releaseYear')
+    song_ids = data.getlist('songIds[]')
+    image_file = files.get('imageFile')
 
-        data_changed = False
+    if not all([title, artist_id, release_year, image_file]):
+        return JsonResponse({"message": "Missing required fields"}, status=400)
 
-        if user.fullName != full_name:
-            user.fullName = full_name
-            data_changed = True
-        if user.clerkId != clerk_id:
-            user.clerkId = clerk_id
-            data_changed = True
+    if not title.strip():
+        return JsonResponse({"message": "Album title is required"}, status=400)
 
-        if data_changed:
-            user.save()
+    try:
+        release_year = int(release_year)
+    except ValueError:
+        return JsonResponse({"message": "Release year must be an integer"}, status=400)
+
+    current_year = datetime.now().year
+    if release_year < 1900 or release_year > current_year:
+        return JsonResponse({"message": f"Invalid release year. Must be between 1900 and {current_year}"}, status=400)
+
+    if not song_ids or len(song_ids) < 2:
+        return JsonResponse({"message": "At least 2 songs are required"}, status=400)
+
+    valid_song_ids = [ObjectId(id) for id in song_ids if Song.objects.filter(id=ObjectId(id)).first()]
+    if len(valid_song_ids) != len(song_ids):
+        return JsonResponse({"message": "One or more song IDs are invalid"}, status=400)
+
+    # Upload image
+    image_url = upload_to_cloudinary(image_file)
+    if not image_url:
+        return JsonResponse({"message": "Failed to upload image"}, status=500)
+
+    # Update album
+    album.title = title
+    album.artist = Artist.objects.get(id=ObjectId(artist_id))  # đảm bảo Artist tồn tại
+    album.releaseYear = release_year
+    album.image = image_url
+    album.songs = valid_song_ids
+    album.save()
+
+    return JsonResponse({"message": "Album updated successfully"}, status=200)
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+def update_playlist(request, id):
+    try:
+        # Parse multipart/form-data
+        request.upload_handlers = [TemporaryFileUploadHandler(request)]
+        parser = MultiPartParser(request.META, request, request.upload_handlers)
+        data, files = parser.parse()
+        
+        title = data.get('title')
+        avatar = files.get('avatar')
+
+        playlist = Playlist.objects(id=ObjectId(id)).first()
+        if not playlist:
+            return JsonResponse({"message": "Playlist not found"}, status=404)
+
+        if title is not None and not title.strip():
+            return JsonResponse({"message": "Playlist title cannot be empty"}, status=400)
+
+        if title:
+            playlist.title = title
+
+        if avatar:
+            playlist.avatar = upload_to_cloudinary(avatar)
+
+        playlist.save()
 
         return JsonResponse({
-            "message": "User updated successfully" if data_changed else "No changes detected",
-            "user": {
-                "id": str(user.id),
-                "fullName": user.fullName,
-                "clerkId": user.clerkId,
-                "imageUrl": user.imageUrl,
-                "createdAt": user.createdAt.isoformat(),
-                "updatedAt": user.updatedAt.isoformat()
-            }
+            "_id": str(playlist.id),
+            "title": playlist.title,
+            "avatar": playlist.avatar,
+            "updatedAt": playlist.updatedAt.isoformat() if playlist.updatedAt else None
         }, status=200)
 
-    except User.DoesNotExist:
-        return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print("Error in update_user:", e)
-        return JsonResponse({"error": str(e)}, status=500)
+        print("Error in update_playlist:", e)
+        return JsonResponse({"message": "Internal server error"}, status=500)
 
-#delete user
-@csrf_exempt
-def delete_user(request, user_id):
-    if request.method != "DELETE":
-        return JsonResponse({"error": "Only DELETE allowed"}, status=405)
+# def upload_to_cloudinary(file, folder_name="others"):
+#     try:
+#         result = cloudinary.uploader.upload(
+#             file,
+#             folder=f"{folder_name}",
+#             resource_type="auto"
+#         )
+#         return result['secure_url']
+#     except Exception as e:
+#         print("Error in uploadToCloudinary:", e)
+#         raise Exception("Error uploading to cloudinary")
 
-    try:
-        user = User.objects.get(id=user_id)
-        user.delete()
-        return JsonResponse({
-            "message": "User deleted successfully",
-            "userId": user_id
-        }, status=200)
+# #user
+# #update user
+# @csrf_exempt
+# def update_user(request, user_id):
+#     if request.method != "PUT":
+#         return JsonResponse({"error": "Only PUT allowed"}, status=405)
 
-    except User.DoesNotExist:
-        return JsonResponse({"error": "User not found"}, status=404)
-    except Exception as e:
-        print("Error in delete_user:", e)
-        return JsonResponse({"error": str(e)}, status=500)
+#     try:
+#         user = User.objects.get(id=user_id)
+#         data = json.loads(request.body)
+
+#         full_name = data.get("fullName", user.fullName)
+#         clerk_id = data.get("clerkId", user.clerkId)
+
+#         data_changed = False
+
+#         if user.fullName != full_name:
+#             user.fullName = full_name
+#             data_changed = True
+#         if user.clerkId != clerk_id:
+#             user.clerkId = clerk_id
+#             data_changed = True
+
+#         if data_changed:
+#             user.save()
+
+#         return JsonResponse({
+#             "message": "User updated successfully" if data_changed else "No changes detected",
+#             "user": {
+#                 "id": str(user.id),
+#                 "fullName": user.fullName,
+#                 "clerkId": user.clerkId,
+#                 "imageUrl": user.imageUrl,
+#                 "createdAt": user.createdAt.isoformat(),
+#                 "updatedAt": user.updatedAt.isoformat()
+#             }
+#         }, status=200)
+
+#     except User.DoesNotExist:
+#         return JsonResponse({"error": "User not found"}, status=404)
+#     except Exception as e:
+#         print("Error in update_user:", e)
+#         return JsonResponse({"error": str(e)}, status=500)
+
+# #delete user
+# @csrf_exempt
+# def delete_user(request, user_id):
+#     if request.method != "DELETE":
+#         return JsonResponse({"error": "Only DELETE allowed"}, status=405)
+
+#     try:
+#         user = User.objects.get(id=user_id)
+#         user.delete()
+#         return JsonResponse({
+#             "message": "User deleted successfully",
+#             "userId": user_id
+#         }, status=200)
+
+#     except User.DoesNotExist:
+#         return JsonResponse({"error": "User not found"}, status=404)
+#     except Exception as e:
+#         print("Error in delete_user:", e)
+#         return JsonResponse({"error": str(e)}, status=500)
 
 
-#artist
-#create artist
-@csrf_exempt
-def create_artist(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Only POST allowed"}, status=405)
+# #artist
+# #create artist
+# @csrf_exempt
+# def create_artist(request):
+#     if request.method != "POST":
+#         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-    try:
-        if 'imageFile' not in request.FILES:
-            return JsonResponse({"error": "Please upload an image file"}, status=400)
+#     try:
+#         if 'imageFile' not in request.FILES:
+#             return JsonResponse({"error": "Please upload an image file"}, status=400)
 
-        # Lấy dữ liệu nghệ sĩ từ yêu cầu
-        name = request.POST.get("name")
-        birthdate_str = request.POST.get("birthdate")
-        image_file = request.FILES["imageFile"]
+#         # Lấy dữ liệu nghệ sĩ từ yêu cầu
+#         name = request.POST.get("name")
+#         birthdate_str = request.POST.get("birthdate")
+#         image_file = request.FILES["imageFile"]
 
-        # chuyển birthdate thành date
-        birthdate = parse_date(birthdate_str)
+#         # chuyển birthdate thành date
+#         birthdate = parse_date(birthdate_str)
 
-        #upload ảnh đến cloudinary
-        image_url = upload_to_cloudinary(image_file,"artists/source")
+#         #upload ảnh đến cloudinary
+#         image_url = upload_to_cloudinary(image_file,"artists/source")
 
-        # Lấy thể loại từ yêu cầu và kiểm tra xem chúng có tồn tại trong cơ sở dữ liệu không
-        genre_ids = request.POST.getlist("genres")  # Thông qua GET để lấy các genre_id
-        genres = []
-        if genre_ids:
-            genres = Genre.objects(id__in=genre_ids)  # Lấy tất cả Genre có id tương ứng
+#         # Lấy thể loại từ yêu cầu và kiểm tra xem chúng có tồn tại trong cơ sở dữ liệu không
+#         genre_ids = request.POST.getlist("genres")  # Thông qua GET để lấy các genre_id
+#         genres = []
+#         if genre_ids:
+#             genres = Genre.objects(id__in=genre_ids)  # Lấy tất cả Genre có id tương ứng
 
-        # tạo và lưu artist
-        artist = Artist(
-            name=name,
-            birthdate=birthdate,
-            imageUrl=image_url,
-            genres=genres  # Gán các genre vào artist
-        )
-        artist.save()
+#         # tạo và lưu artist
+#         artist = Artist(
+#             name=name,
+#             birthdate=birthdate,
+#             imageUrl=image_url,
+#             genres=genres  # Gán các genre vào artist
+#         )
+#         artist.save()
 
-        return JsonResponse({
-            "message": "Artist created successfully",
-            "artistId": str(artist.id)
-        }, status=201)
+#         return JsonResponse({
+#             "message": "Artist created successfully",
+#             "artistId": str(artist.id)
+#         }, status=201)
 
-    except Exception as e:
-        print("Error in create_artist:", e)
-        return JsonResponse({"error": str(e)}, status=500)
+#     except Exception as e:
+#         print("Error in create_artist:", e)
+#         return JsonResponse({"error": str(e)}, status=500)
     
-#update artist
-@csrf_exempt
-def update_artist(request, artist_id):
-    if request.method == 'PUT':
-        try:
-            artist = Artist.objects.get(id=artist_id)
+# #update artist
+# @csrf_exempt
+# def update_artist(request, artist_id):
+#     if request.method == 'PUT':
+#         try:
+#             artist = Artist.objects.get(id=artist_id)
 
-            # Lấy dữ liệu JSON từ request body
-            data = json.loads(request.body)
+#             # Lấy dữ liệu JSON từ request body
+#             data = json.loads(request.body)
 
-            name = data.get('name', artist.name)
-            birthdate_str = data.get('birthdate', str(artist.birthdate) if artist.birthdate else '')
-            birthdate = parse_date(birthdate_str) if birthdate_str else artist.birthdate
+#             name = data.get('name', artist.name)
+#             birthdate_str = data.get('birthdate', str(artist.birthdate) if artist.birthdate else '')
+#             birthdate = parse_date(birthdate_str) if birthdate_str else artist.birthdate
 
-            # Genres
-            genre_ids = data.get('genres', [])
-            genres = Genre.objects(id__in=genre_ids) if genre_ids else artist.genres
+#             # Genres
+#             genre_ids = data.get('genres', [])
+#             genres = Genre.objects(id__in=genre_ids) if genre_ids else artist.genres
 
-            # Kiểm tra thay đổi
-            data_changed = False
-            if artist.name != name:
-                artist.name = name
-                data_changed = True
-            if artist.birthdate != birthdate:
-                artist.birthdate = birthdate
-                data_changed = True
-            if artist.genres != genres:
-                artist.genres = genres
-                data_changed = True
-            # Debug log
-            # print("Current artist data:", artist.name, artist.birthdate, artist.imageUrl)
-            # print("Updated artist data:", name, birthdate, list(genres))
-            if data_changed:
-                artist.save()
-                return JsonResponse({"message": "Artist updated successfully"}, status=200)
-            else:
-                return JsonResponse({"message": "No changes detected, artist not updated"}, status=200)
+#             # Kiểm tra thay đổi
+#             data_changed = False
+#             if artist.name != name:
+#                 artist.name = name
+#                 data_changed = True
+#             if artist.birthdate != birthdate:
+#                 artist.birthdate = birthdate
+#                 data_changed = True
+#             if artist.genres != genres:
+#                 artist.genres = genres
+#                 data_changed = True
+#             # Debug log
+#             # print("Current artist data:", artist.name, artist.birthdate, artist.imageUrl)
+#             # print("Updated artist data:", name, birthdate, list(genres))
+#             if data_changed:
+#                 artist.save()
+#                 return JsonResponse({"message": "Artist updated successfully"}, status=200)
+#             else:
+#                 return JsonResponse({"message": "No changes detected, artist not updated"}, status=200)
 
-        except Artist.DoesNotExist:
-            return JsonResponse({"message": "Artist not found"}, status=404)
-        except Exception as e:
-            print("Error updating artist:", e)
-            return JsonResponse({"message": f"Error: {str(e)}"}, status=500)
-    else:
-        return JsonResponse({"error": "Only PUT allowed"}, status=405)
+#         except Artist.DoesNotExist:
+#             return JsonResponse({"message": "Artist not found"}, status=404)
+#         except Exception as e:
+#             print("Error updating artist:", e)
+#             return JsonResponse({"message": f"Error: {str(e)}"}, status=500)
+#     else:
+#         return JsonResponse({"error": "Only PUT allowed"}, status=405)
            
-#delete artist
-@csrf_exempt
-def delete_artist(request, artist_id):
-    if request.method != 'DELETE':
-        return JsonResponse({"error": "Only DELETE allowed"}, status=405)
+# #delete artist
+# @csrf_exempt
+# def delete_artist(request, artist_id):
+#     if request.method != 'DELETE':
+#         return JsonResponse({"error": "Only DELETE allowed"}, status=405)
 
-    try:
-        artist = Artist.objects.get(id=artist_id)
-        artist.delete()
+#     try:
+#         artist = Artist.objects.get(id=artist_id)
+#         artist.delete()
 
-        return JsonResponse({"message": "Artist deleted successfully"}, status=200)
+#         return JsonResponse({"message": "Artist deleted successfully"}, status=200)
 
-    except Artist.DoesNotExist:
-        return JsonResponse({"error": "Artist not found"}, status=404)
-    except Exception as e:
-        print("Error in delete_artist:", e)
-        return JsonResponse({"error": str(e)}, status=500)
+#     except Artist.DoesNotExist:
+#         return JsonResponse({"error": "Artist not found"}, status=404)
+#     except Exception as e:
+#         print("Error in delete_artist:", e)
+#         return JsonResponse({"error": str(e)}, status=500)
 
-#song
-@csrf_exempt
-def create_song(request):
-    if request.method == 'POST':
-        # Ensure files are uploaded
-        if 'audioFile' not in request.FILES or 'imageFile' not in request.FILES:
-            return JsonResponse({"message": "Please upload all files"}, status=400)
+# #song
+# @csrf_exempt
+# def create_song(request):
+#     if request.method == 'POST':
+#         # Ensure files are uploaded
+#         if 'audioFile' not in request.FILES or 'imageFile' not in request.FILES:
+#             return JsonResponse({"message": "Please upload all files"}, status=400)
 
-        # Retrieve form data
-        title = request.POST['title']
-        artist = request.POST['artist']
-        album_id = request.POST.get('albumId')
-        duration = int(request.POST['duration'])
-        audio_file = request.FILES['audioFile']
-        image_file = request.FILES['imageFile']
+#         # Retrieve form data
+#         title = request.POST['title']
+#         artist = request.POST['artist']
+#         album_id = request.POST.get('albumId')
+#         duration = int(request.POST['duration'])
+#         audio_file = request.FILES['audioFile']
+#         image_file = request.FILES['imageFile']
 
-        audio_url = upload_to_cloudinary(audio_file,"songs/source")
-        image_url = upload_to_cloudinary(image_file,"songs/source")
+#         audio_url = upload_to_cloudinary(audio_file,"songs/source")
+#         image_url = upload_to_cloudinary(image_file,"songs/source")
 
-        # Create and save the song
-        song = Song(
-            title=title,
-            artist=artist,  # You may need to adjust the artist field handling
-            audioUrl=audio_url,
-            imageUrl=image_url,
-            duration=duration,
-            albumId=album_id if album_id else None
-        )
+#         # Create and save the song
+#         song = Song(
+#             title=title,
+#             artist=artist,  # You may need to adjust the artist field handling
+#             audioUrl=audio_url,
+#             imageUrl=image_url,
+#             duration=duration,
+#             albumId=album_id if album_id else None
+#         )
 
-        song.save()
+#         song.save()
 
-        # If the song belongs to an album, update the album's songs array
-        if album_id:
-            album = Album.objects.get(id=album_id)
-            album.songs.append(song)
-            album.save()
+#         # If the song belongs to an album, update the album's songs array
+#         if album_id:
+#             album = Album.objects.get(id=album_id)
+#             album.songs.append(song)
+#             album.save()
 
-        return JsonResponse(song.to_json(), status=201)
+#         return JsonResponse(song.to_json(), status=201)
 
-@csrf_exempt
-def update_song(request, song_id):
-    if request.method == 'PUT':
-        try:
-            song = Song.objects.get(id=song_id)
+# @csrf_exempt
+# def update_song(request, song_id):
+#     if request.method == 'PUT':
+#         try:
+#             song = Song.objects.get(id=song_id)
 
-            # Update song details from form
-            title = request.POST.get('title', song.title)
-            artist = request.POST.get('artist', song.artist)
-            album_id = request.POST.get('albumId', song.albumId)
-            duration = int(request.POST.get('duration', song.duration))
+#             # Update song details from form
+#             title = request.POST.get('title', song.title)
+#             artist = request.POST.get('artist', song.artist)
+#             album_id = request.POST.get('albumId', song.albumId)
+#             duration = int(request.POST.get('duration', song.duration))
 
-            audio_file = request.FILES.get('audioFile')
-            image_file = request.FILES.get('imageFile')
+#             audio_file = request.FILES.get('audioFile')
+#             image_file = request.FILES.get('imageFile')
 
-            if audio_file:
-                song.audioUrl = upload_to_cloudinary(audio_file)
-            if image_file:
-                song.imageUrl = upload_to_cloudinary(image_file)
+#             if audio_file:
+#                 song.audioUrl = upload_to_cloudinary(audio_file)
+#             if image_file:
+#                 song.imageUrl = upload_to_cloudinary(image_file)
 
-            song.title = title
-            song.artist = artist
-            song.duration = duration
+#             song.title = title
+#             song.artist = artist
+#             song.duration = duration
 
-            if album_id and album_id != song.albumId.id:
-                # Remove song from the previous album
-                if song.albumId:
-                    old_album = Album.objects.get(id=song.albumId.id)
-                    old_album.songs.remove(song)
-                    old_album.save()
+#             if album_id and album_id != song.albumId.id:
+#                 # Remove song from the previous album
+#                 if song.albumId:
+#                     old_album = Album.objects.get(id=song.albumId.id)
+#                     old_album.songs.remove(song)
+#                     old_album.save()
 
-                # Add song to the new album
-                new_album = Album.objects.get(id=album_id)
-                new_album.songs.append(song)
-                new_album.save()
+#                 # Add song to the new album
+#                 new_album = Album.objects.get(id=album_id)
+#                 new_album.songs.append(song)
+#                 new_album.save()
 
-            song.albumId = album_id
+#             song.albumId = album_id
 
-            song.save()
+#             song.save()
 
-            return JsonResponse(song.to_json(), status=200)
+#             return JsonResponse(song.to_json(), status=200)
 
-        except Song.DoesNotExist:
-            return JsonResponse({"message": "Song not found"}, status=404)
-
-
-@csrf_exempt
-def delete_song(request, song_id):
-    if request.method == 'DELETE':
-        try:
-            song = Song.objects.get(id=song_id)
-
-            # If song belongs to an album, update the album's songs array
-            if song.albumId:
-                album = Album.objects.get(id=song.albumId.id)
-                album.songs.remove(song)
-                album.save()
-
-            song.delete()
-
-            return JsonResponse({"message": "Song deleted successfully"}, status=200)
-
-        except Song.DoesNotExist:
-            return JsonResponse({"message": "Song not found"}, status=404)
+#         except Song.DoesNotExist:
+#             return JsonResponse({"message": "Song not found"}, status=404)
 
 
-@csrf_exempt
-def create_album(request):
-    if request.method == 'POST':
-        # Retrieve form data
-        title = request.POST['title']
-        artist = request.POST['artist']
-        release_year = int(request.POST['releaseYear'])
-        image_file = request.FILES['imageFile']
+# @csrf_exempt
+# def delete_song(request, song_id):
+#     if request.method == 'DELETE':
+#         try:
+#             song = Song.objects.get(id=song_id)
 
-        image_url = upload_to_cloudinary(image_file)
+#             # If song belongs to an album, update the album's songs array
+#             if song.albumId:
+#                 album = Album.objects.get(id=song.albumId.id)
+#                 album.songs.remove(song)
+#                 album.save()
 
-        album = Album(
-            title=title,
-            artist=artist,
-            imageUrl=image_url,
-            releaseYear=release_year
-        )
+#             song.delete()
 
-        album.save()
+#             return JsonResponse({"message": "Song deleted successfully"}, status=200)
 
-        return JsonResponse(album.to_json(), status=201)
+#         except Song.DoesNotExist:
+#             return JsonResponse({"message": "Song not found"}, status=404)
 
 
-@csrf_exempt
-def delete_album(request, album_id):
-    if request.method == 'DELETE':
-        try:
-            album = Album.objects.get(id=album_id)
-            # Delete all songs related to the album
-            Song.objects(albumId=album.id).delete()
+# @csrf_exempt
+# def create_album(request):
+#     if request.method == 'POST':
+#         # Retrieve form data
+#         title = request.POST['title']
+#         artist = request.POST['artist']
+#         release_year = int(request.POST['releaseYear'])
+#         image_file = request.FILES['imageFile']
 
-            album.delete()
+#         image_url = upload_to_cloudinary(image_file)
 
-            return JsonResponse({"message": "Album deleted successfully"}, status=200)
+#         album = Album(
+#             title=title,
+#             artist=artist,
+#             imageUrl=image_url,
+#             releaseYear=release_year
+#         )
 
-        except Album.DoesNotExist:
-            return JsonResponse({"message": "Album not found"}, status=404)
+#         album.save()
 
+#         return JsonResponse(album.to_json(), status=201)
+
+
+# @csrf_exempt
+# def delete_album(request, album_id):
+#     if request.method == 'DELETE':
+#         try:
+#             album = Album.objects.get(id=album_id)
+#             # Delete all songs related to the album
+#             Song.objects(albumId=album.id).delete()
+
+#             album.delete()
+
+#             return JsonResponse({"message": "Album deleted successfully"}, status=200)
+
+#         except Album.DoesNotExist:
+#             return JsonResponse({"message": "Album not found"}, status=404)

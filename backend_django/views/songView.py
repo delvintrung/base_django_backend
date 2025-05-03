@@ -12,6 +12,7 @@ from mongoengine import Q
 def serialize_document(song):
     data = song.to_mongo().to_dict()
     data['_id'] = str(data['_id'])
+    data['premium'] = data.get('premium', False) 
 
     # Serialize artist
     if song.artist:
@@ -108,7 +109,7 @@ def get_all_songs(request):
                         'title': 'Unknown Album',
                         'imageUrl': ''
                     }
-
+            song_dict['isPremium'] = song_dict.get('isPremium', False)
             songs_data.append(song_dict)
 
         return JsonResponse(songs_data, safe=False) 

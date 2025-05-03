@@ -14,7 +14,7 @@ class Album(Document):
     }
 
     title = StringField(required=True)
-    artist = ReferenceField(Artist,required=True) 
+    artist = ReferenceField(Artist,required=False)
     imageUrl = StringField(required=True)
     releaseYear = IntField(required=True)
     songs = ListField(ReferenceField(Song))   

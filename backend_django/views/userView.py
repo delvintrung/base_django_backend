@@ -1,8 +1,12 @@
 from django.http import JsonResponse
 from django.conf import settings
+from django.middleware.csrf import get_token
 import requests
 from ..models.user import User
 from ..models.message import Message
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+import json
 
 # Hàm đọc session hoặc header chứa token xác thực Clerk
 def get_clerk_token(request):
@@ -57,7 +61,6 @@ def get_fake_current_user_id(request):
 
 
 def serialize_document(doc):
-    """Chuyển đổi Document MongoEngine sang dict và ép _id thành string"""
     d = doc.to_mongo().to_dict()
     if '_id' in d:
         d['_id'] = str(d['_id'])
@@ -75,14 +78,16 @@ def get_all_users(request):
 
 def get_messages(request, clerk_id):
     try:
-        my_id = get_fake_current_user_id(request)
+        my_id = request.auth.get('userId') 
 
         # Tìm user_id tương ứng với clerk_id của người đối thoại
         target_user = User.objects(clerkId=clerk_id).first()
         if not target_user:
             return JsonResponse({'error': 'Target user not found with provided clerkId'}, status=404)
 
-        target_user_id = str(target_user.id)
+        target_user_id = str(target_user.clerkId)
+
+        print(f"my_id: {my_id}, target_user_id: {target_user_id}")
 
         messages = Message.objects.filter(
             __raw__={
@@ -125,29 +130,82 @@ def get_user_by_user_id(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-
+@csrf_exempt
+@require_POST
 def buy_premium_success(request):
     try:
-        user_id = request.user.id  # Assuming the userId is retrieved from auth middleware
+        
+        user_id = request.auth.get('userId')
+        if not user_id:
+            return JsonResponse({'message': 'Missing userId'}, status=400)
 
-        if user_id:
-            user = User.objects.filter(clerkId=user_id).first()
+        
+        user_update = User.objects(clerkId=user_id).update_one(set__isPremium=True)
 
-            if not user:
-                return JsonResponse({'message': 'User not found'}, status=404)
+        if user_update == 0:
+            return JsonResponse({'message': 'User not found'}, status=404)
 
-            # Update premium status
-            user.isPremium = True
-            user.save()
-
-            return JsonResponse({'message': 'Premium status updated', 'userId': str(user.id)}, status=200)
-
-        return JsonResponse({'message': 'User not authenticated'}, status=400)
+        return JsonResponse({
+            'userUpdate': user_update,
+            'message': 'Premium status updated'
+        }, status=200)
 
     except Exception as e:
+        # In Django, errors are typically returned as JSON responses
         return JsonResponse({'error': str(e)}, status=500)
 
 
 def check_premium_status(request):
-    print(request, "check_premium_status")
     return JsonResponse({"isPremium": "Chuaw có"}) 
+
+
+def get_csrf_token(request):
+    csrf_token = get_token(request)
+    return JsonResponse({'csrfToken': csrf_token})
+
+@csrf_exempt
+# @require_http_methods(["POST"])
+@require_POST
+def send_message(request):
+
+    try:
+        data = json.loads(request.body)
+        
+        sender_id = data.get('senderId')
+        receiver_id = data.get('receiverId')
+        content = data.get('content')
+
+        if not all([sender_id, receiver_id, content]):
+            missing_fields = []
+            if not sender_id: missing_fields.append('senderId')
+            if not receiver_id: missing_fields.append('receiverId')
+            if not content: missing_fields.append('content')
+            return JsonResponse({
+                'error': f'Missing required fields: {", ".join(missing_fields)}'
+            }, status=400)
+
+        
+        print(f"Sender ID: {sender_id}, Receiver ID: {receiver_id}, Content: {content}")
+        message = Message(
+            senderId=sender_id,
+            receiverId=receiver_id,
+            content=content
+        )
+        message.save()
+
+        # Serialize and return response
+        message_data = serialize_document(message)
+        return JsonResponse(message_data, status=200)
+
+    except json.JSONDecodeError as e:
+        return JsonResponse({
+            'error': 'Invalid JSON data',
+            'details': str(e)
+        }, status=400)
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'error': 'Internal server error',
+            'details': str(e)
+        }, status=500) 
+    

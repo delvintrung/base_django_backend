@@ -29,6 +29,16 @@ def get_favorite_by_id(request):
                 continue
 
             song_data = song.to_mongo().to_dict()
+            artist = song.artist 
+            artist_data = None
+            if artist:
+                artist_data = {
+                    "_id": str(artist.id),
+                    "name": artist.name,
+                    "imageUrl": artist.imageUrl,
+                    "createdAt": artist.createdAt.isoformat(),
+                    "updatedAt": artist.updatedAt.isoformat(),
+                }
             data.append({
                 "_id": str(fav.id),
                 "clerkId": fav.clerkId,
@@ -37,9 +47,11 @@ def get_favorite_by_id(request):
                 "songId": {
                     "_id": str(song.id),
                     "title": song_data.get("title"),
-                    "artist": None,
+                    "artist": artist_data,
                     "imageUrl": song_data.get("imageUrl"),
-                    "audioUrl": song_data.get("audioUrl")
+                    "audioUrl": song_data.get("audioUrl"),
+                    "duration": song_data.get("duration"),
+                    "albumId": song_data.get("albumId"),
                 }
             })
         return Response(data)
