@@ -34,7 +34,7 @@ def upload_to_cloudinary(file, folder_name="others"):
 def get_playlist_by_clerki_id(request):
     try:
         print(request.auth)
-        clerk_id = request.auth.get('userId')
+        clerk_id = request.GET.get('clerkId')
         if not clerk_id:
             return JsonResponse({'error': 'Missing clerk_id'}, status=400)
 
@@ -83,9 +83,6 @@ def get_playlist_by_clerki_id(request):
                                 'name': artist.name,
                                 'imageUrl': artist.imageUrl,
                                 "birthday": artist.birthdate,
-                                "description": artist.description,
-                                "followers": artist.followers,
-                                "listeners": artist.listeners,
                                 "genres": [str(genre.id) for genre in artist.genres] if artist.genres else [],
                             }
                         else:
