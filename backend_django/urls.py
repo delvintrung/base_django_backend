@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import artistView,favoriteView,userView,albumView,songView,authView,adminView, testView, statView, playlistView
+from .views import artistView,favoriteView,userView,albumView,songView,authView,adminView, testView, statView, playlistView,adminPlusView
 
 from django.http import JsonResponse
 # from .views.authView import (
@@ -105,11 +105,11 @@ api_urlpatterns  = [
     path('songs/<str:song_id>', songView.get_song, name='get_song'),  
     path('songs/delete/<str:song_id>', songView.delete_song, name='delete_song'),
     
-    # ARTIST
+    # # ARTIST
     path('artists', artistView.get_all_artists),
-    path('admin/artists/create', adminView.create_artist),
-    path('admin/artists/update/<str:artist_id>', adminView.update_artist, name='update_artist'),  
-    path('admin/artists/delete/<str:artist_id>', adminView.delete_artist, name='delete_artist'),
+    path('admin/artists/create', adminPlusView.create_artist),
+    path('admin/artists/update/<str:artist_id>', adminPlusView.update_artist, name='update_artist'),  
+    path('admin/artists/delete/<str:artist_id>', adminPlusView.delete_artist, name='delete_artist'),
 
     # ALBUM
     path('albums', albumView.get_all_albums),
@@ -118,9 +118,8 @@ api_urlpatterns  = [
     #STATS
     path('stats', statView.get_counts, name='get_countUserArtistsAlbumsSongs'),
 
-
     # Admin
-    path('admin/check-admin',authView.check_admin, name='admin_check'),
+    path('admin/check',authView.check_admin, name='admin_check'),
 
 
     # #ADMIN
@@ -129,9 +128,11 @@ api_urlpatterns  = [
     path("admin/artists",adminView.createArtist,name='admin_create_artist'),
     path("admin/songs/delete/<str:song_id>", adminView.delete_song ,name='admin_delete_song'),
     path("admin/albums", adminView.createAlbum ,name='admin_create_album'),
+    path("admin/albums/update/<str:album_id>", adminView.update_albumadmin ,name='adminupdatealbum'),
     path("admin/albums/<str:album_id>", adminView.delete_album, name='admin_delete_album'),
     path('check-user', testView.check_admin_view, name='check_user'),
     path("admin/playlists/<str:playlist_id>", adminView.delete_playlist, name='admin_delete_playlist'),
+    path("admin/playlists/update/<str:playlist_id>", adminView.update_playlist, name='admin_update_playlist'),
 ]
 
 
