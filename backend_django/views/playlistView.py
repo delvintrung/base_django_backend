@@ -6,6 +6,8 @@ from mongoengine.connection import get_db
 import datetime
 from bson import ObjectId
 from bson.errors import InvalidId
+import cloudinary
+from django.core.files.uploadedfile import UploadedFile
 
 from ..models.playlist import Playlist
 from ..models.song import Song
@@ -15,6 +17,17 @@ from ..models.genre import Genre
 
 from mongoengine import DoesNotExist
 
+def upload_to_cloudinary(file, folder_name="others"):
+    try:
+        result = cloudinary.uploader.upload(
+            file,
+            folder=f"{folder_name}",
+            resource_type="auto"
+        )
+        return result['secure_url']
+    except Exception as e:
+        print("Error in uploadToCloudinary:", e)
+        raise Exception("Error uploading to cloudinary")
 
 
 @csrf_exempt
@@ -222,20 +235,30 @@ def create_playlist(request):
 @csrf_exempt
 def update_playlist(request, playlist_id):
     try:
-        data = json.loads(request.body)
-        title = data.get('title')
-        avatar = data.get('avatar')
-        songs = data.get('songs')
+        if request.method != 'POST':
+            return JsonResponse({'message': 'Method not allowed'}, status=405)
 
-        playlist = Playlist.objects.get(id=playlist_id)
-        playlist.title = title
-        playlist.avatar = avatar
-        playlist.songs = songs
+        title = request.POST.get('title')
+        avatar = request.FILES.get('avatar')
+
+        try:
+            playlist = Playlist.objects.get(id=playlist_id)
+        except Playlist.DoesNotExist:
+            return JsonResponse({'message': 'Playlist not found'}, status=404)
+
+        if title is not None and not title.strip():
+            return JsonResponse({'message': 'Playlist title cannot be empty'}, status=400)
+
+        if title:
+            playlist.title = title
+        if avatar:
+            playlist.avatar = upload_to_cloudinary(avatar)
+
         playlist.save()
-
         return JsonResponse(serialize_playlist(playlist), status=200)
+
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)  
+        return JsonResponse({'error': str(e)}, status=500)
 @csrf_exempt
 def add_song_to_playlist(request, playlist_id):
     try:
