@@ -19,7 +19,8 @@ class Song(Document):
     audioUrl = StringField(required=True)
     createdAt = DateTimeField(default=datetime.now)
     updatedAt = DateTimeField(default=datetime.now)
-
+    videoUrl = StringField()
+ 
     def save(self, *args, **kwargs):
         self.updatedAt = datetime.now()
         return super(Song, self).save(*args, **kwargs)

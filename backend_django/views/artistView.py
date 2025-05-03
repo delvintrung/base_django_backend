@@ -5,15 +5,47 @@ from ..models.genre import Genre
 from ..models.song import Song
 from mongoengine.queryset.visitor import Q
 import random
+from datetime import datetime
+
+
+def serialize_document(artist):
+    data = artist.to_mongo().to_dict()
+    data['_id'] = str(data['_id'])
+
+    # ISO format cho datetime
+    if 'createdAt' in data and isinstance(data['createdAt'], datetime):
+        data['createdAt'] = data['createdAt'].isoformat()
+    if 'updatedAt' in data and isinstance(data['updatedAt'], datetime):
+        data['updatedAt'] = data['updatedAt'].isoformat()
+
+    return data
+
 
 @csrf_exempt
 def get_all_artists(request):
     try:
-        # -1 = Descending => newest -> oldest
-        # 1 = Ascending => oldest -> newest
-        artists = Artist.objects.order_by('-created_at').select_related()
-        artists_data = [a.to_mongo().to_dict() for a in artists]
-        return JsonResponse(artists_data, safe=False)
+        artists = Artist.objects.all()
+        artist_list = []
+
+        for artist in artists:
+            artist_list.append({
+                '_id': str(artist.id),
+                'name': artist.name,
+                'birthdate': str(artist.birthdate) if artist.birthdate else None,
+                'imageUrl': artist.imageUrl,
+                'createdAt': artist.createdAt if artist.createdAt else None,
+                'updatedAt': artist.updatedAt if artist.updatedAt else None,
+                'listeners': artist.listeners,
+                'followers': artist.followers,
+                'description': artist.description,
+                'genres': [str(genre.id) for genre in artist.genres] if artist.genres else [],
+
+                # Thêm các trường khác nếu có, ví dụ:
+                # 'genre': artist.genre,
+                # 'image_url': artist.image_url,
+            })
+
+        return JsonResponse( artist_list, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 

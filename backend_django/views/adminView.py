@@ -222,6 +222,8 @@ def createAlbum(request):
     if request.method == 'POST':
         title = request.POST.get('title')
         artist = request.POST.get('artist')
+        print("artist:", artist)
+        print("title:", ObjectId(artist))
         releaseYear = request.POST.get('releaseYear')
         image_file = request.FILES.get('imageFile')
         song_ids = request.POST.getlist("songIds[]")
@@ -262,7 +264,7 @@ def createAlbum(request):
         # Tạo album
         album = Album.objects.create(
             title=title,
-            artist=artist if artist else None,
+            artist=ObjectId(artist) if artist else None,
             songs=[ObjectId(gid) for gid in song_ids],
             releaseYear=release_year,
             imageUrl=imageUrl, 
