@@ -105,6 +105,7 @@ def get_playlist_by_clerki_id(request):
         return JsonResponse(data, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
     
 @csrf_exempt
 def get_playlist_by_id(request, playlist_id):
@@ -197,3 +198,96 @@ def get_playlist_by_id(request, playlist_id):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def create_playlist(request):
+    try:
+        data = json.loads(request.body)
+        title = data.get('title')
+        avatar = data.get('avatar')
+        clerk_id = data.get('clerkId')
+        songs = data.get('songs')
+
+        playlist = Playlist(
+            title=title,
+            avatar=avatar,
+            clerkId=clerk_id,
+            songs=songs
+        )
+        playlist.save()
+
+        return JsonResponse(serialize_playlist(playlist), status=201)
+    except Exception as e:  
+        return JsonResponse({'error': str(e)}, status=500)
+@csrf_exempt
+def update_playlist(request, playlist_id):
+    try:
+        data = json.loads(request.body)
+        title = data.get('title')
+        avatar = data.get('avatar')
+        songs = data.get('songs')
+
+        playlist = Playlist.objects.get(id=playlist_id)
+        playlist.title = title
+        playlist.avatar = avatar
+        playlist.songs = songs
+        playlist.save()
+
+        return JsonResponse(serialize_playlist(playlist), status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)  
+@csrf_exempt
+def add_song_to_playlist(request, playlist_id):
+    try:
+        data = json.loads(request.body)
+        song_id = data.get('songId')
+        
+        if not song_id:
+            return JsonResponse({'error': 'Missing songId'}, status=400)
+            
+        try:
+            # Chuyển đổi song_id thành ObjectId
+            song_object_id = ObjectId(song_id)
+        except Exception as e:
+            return JsonResponse({'error': 'Invalid songId format'}, status=400)
+            
+        # Kiểm tra xem bài hát có tồn tại không
+        song = Song.objects(id=song_object_id).first()
+        if not song:
+            return JsonResponse({'error': 'Song not found'}, status=404)
+            
+        playlist = Playlist.objects(id=playlist_id).first()
+        if not playlist:
+            return JsonResponse({'error': 'Playlist not found'}, status=404)
+            
+        # Kiểm tra xem bài hát đã có trong playlist chưa
+        if song_object_id in playlist.songs:
+            return JsonResponse({'error': 'Song already in playlist'}, status=400)
+            
+        playlist.songs.append(song_object_id)
+        playlist.save()
+        
+        return JsonResponse(serialize_playlist(playlist), status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)  
+
+      
+def serialize_playlist(playlist):
+    return {
+        "_id": str(playlist.id),
+        "title": playlist.title,
+        "avatar": playlist.avatar,
+        "clerkId": playlist.clerkId,    
+        "songs": [str(song_id) for song_id in playlist.songs]  # Chuyển đổi ObjectId thành string
+    }
+def serialize_song(song):
+    return {
+        "_id": str(song.id),
+        "title": song.title,    
+        "artist": song.artist,
+        "album": song.album,
+        "duration": song.duration,
+        "imageUrl": song.imageUrl,
+        "audioUrl": song.audioUrl,
+        "lyrics": song.lyrics
+    }   
