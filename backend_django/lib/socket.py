@@ -2,7 +2,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from mongoengine import connect
-from chat.models import Message
+from ..models import message
 from collections import defaultdict
 
 class ChatConsumer(AsyncWebsocketConsumer):
