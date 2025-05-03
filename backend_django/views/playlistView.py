@@ -138,7 +138,7 @@ def get_playlist_by_id(request, playlist_id):
             'title': playlist.title,
             'avatar': playlist.avatar if hasattr(playlist, 'avatar') else None,
             'clerkId': playlist.clerkId if hasattr(playlist, 'clerkId') else None,
-            'createdAt': playlist.createdAt.isoformat() if hasattr(playlist, 'createdAt') else None,
+            'createdAt': playlist.createdAt if hasattr(playlist, 'createdAt') else None,
             'songs': []
         }
 
