@@ -12,8 +12,8 @@ class Song(Document):
         ]
     }
     title = StringField(required=True)
-    artist = ReferenceField(Artist, required=True)
-    albumId = ObjectIdField(required=True)
+    artist = ReferenceField(Artist, required=False)
+    albumId = ObjectIdField(required=False, null=True)
     duration = IntField(required=True)
     imageUrl = StringField(required=True)   
     audioUrl = StringField(required=True)
