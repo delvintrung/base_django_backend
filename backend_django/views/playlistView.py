@@ -33,7 +33,6 @@ def upload_to_cloudinary(file, folder_name="others"):
 @csrf_exempt
 def get_playlist_by_clerki_id(request):
     try:
-        print(request.auth)
         clerk_id = request.auth.get('userId')
         if not clerk_id:
             return JsonResponse({'error': 'Missing clerk_id'}, status=400)

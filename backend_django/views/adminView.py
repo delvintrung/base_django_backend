@@ -294,7 +294,7 @@ def create_song(request):
             song_data = {
                 "_id": str(song.id),
                 "title": song.title,
-                "artist": str(album.artist.id) if album.artist else None,
+                "artist": str(artist_id) if artist_id else None,
                 "audioUrl": song.audioUrl,
                 "imageUrl": song.imageUrl,
                 "duration": song.duration,
@@ -311,8 +311,6 @@ def createAlbum(request):
     if request.method == 'POST':
         title = request.POST.get('title')
         artist = request.POST.get('artist')
-        print("artist:", artist)
-        print("title:", ObjectId(artist))
         releaseYear = request.POST.get('releaseYear')
         image_file = request.FILES.get('imageFile')
         song_ids = request.POST.getlist("songIds[]")
@@ -353,7 +351,7 @@ def createAlbum(request):
         # Tạo album
         album = Album.objects.create(
             title=title,
-            artist=ObjectId(artist) if artist else None,
+            artist=artist if artist else None,
             songs=[ObjectId(gid) for gid in song_ids],
             releaseYear=release_year,
             imageUrl=imageUrl, 
@@ -945,4 +943,3 @@ def update_playlist(request, id):
 
 #         except Album.DoesNotExist:
 #             return JsonResponse({"message": "Album not found"}, status=404)
-

@@ -1,8 +1,11 @@
 from django.http import JsonResponse
 from django.conf import settings
+from django.middleware.csrf import get_token
 import requests
 from ..models.user import User
 from ..models.message import Message
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 # Hàm đọc session hoặc header chứa token xác thực Clerk
 def get_clerk_token(request):
@@ -125,29 +128,35 @@ def get_user_by_user_id(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-
+@csrf_exempt
+@require_POST
 def buy_premium_success(request):
     try:
-        user_id = request.user.id  # Assuming the userId is retrieved from auth middleware
+        
+        user_id = request.auth.get('userId')
+        if not user_id:
+            return JsonResponse({'message': 'Missing userId'}, status=400)
 
-        if user_id:
-            user = User.objects.filter(clerkId=user_id).first()
+        
+        user_update = User.objects(clerkId=user_id).update_one(set__isPremium=True)
 
-            if not user:
-                return JsonResponse({'message': 'User not found'}, status=404)
+        if user_update == 0:
+            return JsonResponse({'message': 'User not found'}, status=404)
 
-            # Update premium status
-            user.isPremium = True
-            user.save()
-
-            return JsonResponse({'message': 'Premium status updated', 'userId': str(user.id)}, status=200)
-
-        return JsonResponse({'message': 'User not authenticated'}, status=400)
+        return JsonResponse({
+            'userUpdate': user_update,
+            'message': 'Premium status updated'
+        }, status=200)
 
     except Exception as e:
+        # In Django, errors are typically returned as JSON responses
         return JsonResponse({'error': str(e)}, status=500)
 
 
 def check_premium_status(request):
-    print(request, "check_premium_status")
     return JsonResponse({"isPremium": "Chuaw có"}) 
+
+
+def get_csrf_token(request):
+    csrf_token = get_token(request)
+    return JsonResponse({'csrfToken': csrf_token})

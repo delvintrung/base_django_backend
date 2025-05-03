@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, DateTimeField, ObjectIdField, ReferenceField, IntField
+from mongoengine import Document, StringField, DateTimeField, ObjectIdField, ReferenceField, IntField, BooleanField
 from datetime import datetime
 from .artist import Artist
 class Song(Document):
@@ -20,6 +20,7 @@ class Song(Document):
     createdAt = DateTimeField(default=datetime.now)
     updatedAt = DateTimeField(default=datetime.now)
     videoUrl = StringField()
+    premium = BooleanField()
  
     def save(self, *args, **kwargs):
         self.updatedAt = datetime.now()
