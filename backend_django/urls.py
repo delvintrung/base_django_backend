@@ -79,7 +79,8 @@ api_urlpatterns  = [
     path('users/buy-premium', userView.buy_premium_success, name='buy_premium_success'),
 
     # PLAYLIST
-    path('playlist', playlistView.get_playlist_by_id, name='get_playlist_by_id'),
+    path('playlist', playlistView.get_playlist_by_clerki_id, name='get_playlist_by_id'),
+    path('playlist/<str:playlist_id>', playlistView.get_playlist_by_id, name='get_playlist_by_id'),
 
     
 

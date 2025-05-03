@@ -1,104 +1,168 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from asgiref.sync import sync_to_async
-from ..models import Message  # Giống như mongoose.model
-
-user_sockets = {}
-user_activities = {}
+from channels.db import database_sync_to_async
+from mongoengine import connect
+from chat.models import Message
+from collections import defaultdict
 
 class ChatConsumer(AsyncWebsocketConsumer):
+    user_sockets = defaultdict(set)  # {user_id: set(socket_channel_names)}
+    user_activities = {}  # {user_id: activity}
+
     async def connect(self):
         await self.accept()
-        print("Socket connected")
+        self.user_id = None
 
     async def disconnect(self, close_code):
-        user_id = None
-        for uid, sid in user_sockets.items():
-            if sid == self.channel_name:
-                user_id = uid
-                break
-
-        if user_id:
-            user_sockets.pop(user_id)
-            user_activities.pop(user_id)
-            await self.broadcast("user_disconnected", user_id)
+        if self.user_id:
+            # Xóa socket khỏi user_sockets
+            self.user_sockets[self.user_id].discard(self.channel_name)
+            if not self.user_sockets[self.user_id]:
+                del self.user_sockets[self.user_id]
+                # Xóa hoạt động
+                if self.user_id in self.user_activities:
+                    del self.user_activities[self.user_id]
+                # Phát thông báo người dùng ngắt kết nối
+                await self.channel_layer.group_send(
+                    "chat_global",
+                    {
+                        "type": "user_disconnected",
+                        "user_id": self.user_id,
+                    }
+                )
+            # Xóa khỏi nhóm toàn cục
+            await self.channel_layer.group_discard("chat_global", self.channel_name)
 
     async def receive(self, text_data):
         data = json.loads(text_data)
         event = data.get("event")
 
         if event == "user_connected":
-            user_id = data["userId"]
-            user_sockets[user_id] = self.channel_name
-            user_activities[user_id] = "Idle"
-
+            user_id = data.get("user_id")
+            self.user_id = user_id
+            # Thêm socket vào user_sockets
+            self.user_sockets[user_id].add(self.channel_name)
+            # Đặt hoạt động ban đầu
+            self.user_activities[user_id] = "Idle"
+            # Thêm vào nhóm toàn cục để phát tin
+            await self.channel_layer.group_add("chat_global", self.channel_name)
+            # Phát thông báo người dùng đã kết nối
+            await self.channel_layer.group_send(
+                "chat_global",
+                {
+                    "type": "user_connected",
+                    "user_id": user_id,
+                }
+            )
+            # Gửi danh sách người dùng trực tuyến cho client vừa kết nối
             await self.send(text_data=json.dumps({
                 "event": "users_online",
-                "data": list(user_sockets.keys()),
+                "users": list(self.user_sockets.keys()),
             }))
-
-            await self.broadcast("user_connected", user_id)
-            await self.broadcast("activities", list(user_activities.items()))
+            # Phát danh sách hoạt động hiện tại
+            await self.channel_layer.group_send(
+                "chat_global",
+                {
+                    "type": "activities",
+                    "activities": self.user_activities,
+                }
+            )
 
         elif event == "update_activity":
-            user_id = data["userId"]
-            activity = data["activity"]
-            user_activities[user_id] = activity
-            await self.broadcast("activity_updated", {"userId": user_id, "activity": activity})
+            user_id = data.get("user_id")
+            activity = data.get("activity")
+            print(f"Hoạt động cập nhật: {user_id} -> {activity}")
+            self.user_activities[user_id] = activity
+            # Phát thông báo cập nhật hoạt động
+            await self.channel_layer.group_send(
+                "chat_global",
+                {
+                    "type": "activity_updated",
+                    "user_id": user_id,
+                    "activity": activity,
+                }
+            )
 
         elif event == "send_message":
+            sender_id = data.get("sender_id")
+            receiver_id = data.get("receiver_id")
+            content = data.get("content")
             try:
-                sender_id = data["senderId"]
-                receiver_id = data["receiverId"]
-                content = data["content"]
-
-                message = await sync_to_async(Message.objects.create)(
-                    sender_id=sender_id,
-                    receiver_id=receiver_id,
-                    content=content
-                )
-
-                if receiver_id in user_sockets:
-                    await self.channel_layer.send(
-                        user_sockets[receiver_id],
-                        {
-                            "type": "send.message",
-                            "message": {
-                                "event": "receive_message",
-                                "data": {
-                                    "id": message.id,
-                                    "senderId": sender_id,
-                                    "receiverId": receiver_id,
-                                    "content": content,
-                                }
+                # Lưu tin nhắn vào MongoDB
+                message = await self.create_message(sender_id, receiver_id, content)
+                message_data = {
+                    "id": str(message.id),  # MongoEngine ID là ObjectId, cần chuyển sang string
+                    "senderId": message.senderId,
+                    "receiverId": message.receiverId,
+                    "content": message.content,
+                    "createdAt": message.createdAt.isoformat(),
+                    "updatedAt": message.updatedAt.isoformat(),
+                }
+                # Gửi tin nhắn đến người nhận nếu họ đang trực tuyến
+                if receiver_id in self.user_sockets:
+                    for channel_name in self.user_sockets[receiver_id]:
+                        await self.channel_layer.send(
+                            channel_name,
+                            {
+                                "type": "receive_message",
+                                "message": message_data,
                             }
-                        }
-                    )
-
+                        )
+                # Xác nhận với người gửi
                 await self.send(text_data=json.dumps({
                     "event": "message_sent",
-                    "data": {
-                        "id": message.id,
-                        "senderId": sender_id,
-                        "receiverId": receiver_id,
-                        "content": content,
-                    }
+                    "message": message_data,
                 }))
             except Exception as e:
+                print(f"Lỗi tin nhắn: {e}")
                 await self.send(text_data=json.dumps({
                     "event": "message_error",
-                    "error": str(e)
+                    "error": str(e),
                 }))
 
-    async def send_message(self, event):
-        await self.send(text_data=json.dumps(event["message"]))
+    @database_sync_to_async
+    def create_message(self, sender_id, receiver_id, content):
+        # Tạo và lưu tin nhắn với MongoEngine
+        message = Message(
+            senderId=sender_id,
+            receiverId=receiver_id,
+            content=content,
+        )
+        message.save()
+        return message
 
-    async def broadcast(self, event_name, data):
-        for sid in user_sockets.values():
-            await self.channel_layer.send(sid, {
-                "type": "send.message",
-                "message": {
-                    "event": event_name,
-                    "data": data
-                }
-            })
+    # Xử lý sự kiện user_connected
+    async def user_connected(self, event):
+        await self.send(text_data=json.dumps({
+            "event": "user_connected",
+            "user_id": event["user_id"],
+        }))
+
+    # Xử lý sự kiện user_disconnected
+    async def user_disconnected(self, event):
+        await self.send(text_data=json.dumps({
+            "event": "user_disconnected",
+            "user_id": event["user_id"],
+        }))
+
+    # Xử lý sự kiện activities
+    async def activities(self, event):
+        await self.send(text_data=json.dumps({
+            "event": "activities",
+            "activities": event["activities"],
+        }))
+
+    # Xử lý sự kiện activity_updated
+    async def activity_updated(self, event):
+        await self.send(text_data=json.dumps({
+            "event": "activity_updated",
+            "user_id": event["user_id"],
+            "activity": event["activity"],
+        }))
+
+    # Xử lý sự kiện receive_message
+    async def receive_message(self, event):
+        await self.send(text_data=json.dumps({
+            "event": "receive_message",
+            "message": event["message"],
+        }))
