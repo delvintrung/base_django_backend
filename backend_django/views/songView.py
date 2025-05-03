@@ -51,6 +51,7 @@ def serialize_document(song):
 @csrf_exempt
 
 def get_all_songs(request): 
+
     try:
         songs = Song.objects.all()
         songs_data = []
@@ -114,6 +115,8 @@ def get_all_songs(request):
     except Exception as e:
         print("Error in get_all_songs:", str(e))
         return JsonResponse({'error': str(e)}, status=500)
+    
+    
 @csrf_exempt
 def get_song(request, song_id):
     try:
