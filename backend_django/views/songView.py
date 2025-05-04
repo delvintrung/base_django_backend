@@ -49,7 +49,6 @@ def serialize_document(song):
     return data
 
 @csrf_exempt
-
 def get_all_songs(request): 
 
     try:
@@ -61,7 +60,7 @@ def get_all_songs(request):
         artist_dict = {str(artist.id): artist for artist in artists}
 
         # Tương tự cho album (nếu cần)
-        album_ids = [str(song.albumId.id) for song in songs if song.albumId]
+        album_ids = [str(song.albumId) for song in songs if song.albumId] 
         albums = Album.objects(id__in=album_ids)
         album_dict = {str(album.id): album for album in albums}
 
@@ -131,33 +130,70 @@ def get_song(request, song_id):
 @csrf_exempt
 def get_featured_songs(request):
     try:
-        # Lấy tất cả bài hát
-        all_songs = list(Song.objects.all())
-        
-        # Random lấy tối đa 6 bài hát
-        sampled_songs = random.sample(all_songs, min(6, len(all_songs)))
-        
-        # Preload artists và albums để tối ưu truy vấn
+    
+        songs = Song.objects.all()
+        songs_data = []
+        sampled_songs = random.sample(list(songs), min(len(songs), 6))
+        # Format lại dữ liệu giống như Node.js đang làm
         artist_ids = [str(song.artist.id) for song in sampled_songs if song.artist]
+        
         artists = Artist.objects(id__in=artist_ids)
         artist_dict = {str(artist.id): artist for artist in artists}
 
-        album_ids = [str(song.albumId.id) for song in sampled_songs if song.albumId]
+        # Tương tự cho album (nếu cần)
+        album_ids = [str(song.albumId) for song in sampled_songs if song.albumId] 
         albums = Album.objects(id__in=album_ids)
         album_dict = {str(album.id): album for album in albums}
 
-        # Serialize từng bài hát bằng serialize_document
-        result = []
+        # Xử lý từng bài hát
         for song in sampled_songs:
-            # Gán artist và albumId từ dictionary preload để serialize_document sử dụng
-            song.artist = artist_dict.get(str(song.artist.id)) if song.artist else None
-            song.albumId = album_dict.get(str(song.albumId.id)) if song.albumId else None
-            song_data = serialize_document(song)
-            result.append(song_data)
+            song_dict = song.to_mongo().to_dict()
+            song_dict['_id'] = str(song_dict['_id'])
 
-        return JsonResponse(result, safe=False)
+            # Xử lý trường artist
+            if 'artist' in song_dict:
+                artist_id = str(song_dict['artist'])
+                artist = artist_dict.get(artist_id)
+                if artist:
+                    song_dict['artist'] = {
+                        '_id': str(artist.id),
+                        'name': artist.name,
+                        'imageUrl': artist.imageUrl,
+                        "birthday": artist.birthdate,
+                        "description": artist.description,
+                        "followers": artist.followers,
+                        "listeners": artist.listeners,
+                        "genres": [str(genre.id) for genre in artist.genres] if artist.genres else [],
+                    }
+                else:
+                    song_dict['artist'] = {
+                        '_id': artist_id,
+                        'name': 'Unknown Artist',
+                        'imageUrl': ''
+                    }
+
+            # Xử lý trường album
+            if 'albumId' in song_dict:
+                album_id = str(song_dict['albumId'])
+                album = album_dict.get(album_id)
+                if album:
+                    song_dict['albumId'] = {
+                        '_id': str(album.id),
+                        'title': album.title,
+                        'imageUrl': album.imageUrl
+                    }
+                else:
+                    song_dict['albumId'] = {
+                        '_id': album_id,
+                        'title': 'Unknown Album',
+                        'imageUrl': ''
+                    }
+            song_dict['isPremium'] = song_dict.get('isPremium', False)
+            songs_data.append(song_dict)
+
+        return JsonResponse(songs_data, safe=False) 
     except Exception as e:
-        print("Error in get_featured_songs:", str(e))
+        print("Error in get_all_songs:", str(e))
         return JsonResponse({'error': str(e)}, status=500)
     
     

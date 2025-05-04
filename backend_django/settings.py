@@ -139,6 +139,17 @@ connect(
     host=os.getenv("MONGO_URI"),
 )
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'djongo',
+#         'NAME': 'spotify_clone',
+#         'ENFORCE_SCHEMA': False,
+#         'CLIENT': {
+#             'host': 'mongodb://localhost:27017',
+#         }
+#     }
+# }
+
 CLERK_API_KEY = os.getenv("CLERK_API_KEY")
 
 
