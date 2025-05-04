@@ -35,8 +35,7 @@ api_urlpatterns  = [
     path('playlist', playlistView.get_playlist_by_clerki_id, name='get_playlist_by_id'),
     path('playlist/<str:playlist_id>', playlistView.get_playlist_by_id, name='get_playlist_by_id'),
     path('playlists/create', playlistView.create_playlist, name='create_playlist'),
-    path('playlists/<str:playlist_id>/update', playlistView.update_playlist, name='update_playlist'),
-    path('playlists/<str:playlist_id>/add-song', playlistView.add_song_to_playlist, name='add_song_to_playlist'),
+    path('playlists/add_song', playlistView.add_song_to_playlist, name='add_song_to_playlist'),
 
     
 
@@ -72,6 +71,7 @@ api_urlpatterns  = [
 
     # Admin
     path('admin/check-admin',authView.check_admin, name='admin_check'),
+    path('admin/playlists/<str:playlist_id>/update', playlistView.update_playlist, name='update_playlist'),
 
 
     # #ADMIN
