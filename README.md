@@ -52,8 +52,8 @@ Follow these steps to set up the project locally:
 Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/spotify-clone-backend.git
-cd spotify-clone-backend
+git clone https://github.com/delvintrung/base_django_backend.git
+cd base_django_backend
 ```
 
 Create and activate a virtual environment:
@@ -122,9 +122,9 @@ For detailed API documentation, refer to /docs/ (if using Django REST Framework'
 Project Structure
 
 ```bash
-backend_django/
+base_django_backend/
 ├── manage.py                # Django management script
-├── backend_django/          # Main Django app
+├── base_django_backend/          # Main Django app
 |   ├── lib/                 # Config lib used
 |   ├── middleware/          # Middleware auth,...
 |   ├── models/             # Mongoogo model
