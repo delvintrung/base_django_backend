@@ -10,7 +10,7 @@ from django.http import QueryDict
 from django.http.multipartparser import MultiPartParser, MultiPartParserError
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from datetime import datetime
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_datetime
 from bson import ObjectId 
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
@@ -132,9 +132,12 @@ def create_artist(request):
         name = request.POST.get("name")
         birthdate_str = request.POST.get("birthdate")
         image_file = request.FILES["imageFile"]
+        description = request.POST.get("description")
+        followers = request.POST.get("followers", 0)
+        listeners = request.POST.get("listeners", 0)
 
         # chuyển birthdate thành date
-        birthdate = parse_date(birthdate_str)
+        birthdate = parse_datetime(birthdate_str)
 
         #upload ảnh đến cloudinary
         image_url = upload_to_cloudinary(image_file,"artists/source")
@@ -151,6 +154,7 @@ def create_artist(request):
             birthdate=birthdate,
             imageUrl=image_url,
             genres=genres  # Gán các genre vào artist
+            ,description=description,followers=followers,listeners=listeners
         )
         artist.save()
 
@@ -175,7 +179,7 @@ def update_artist(request, artist_id):
 
             name = data.get('name', artist.name)
             birthdate_str = data.get('birthdate', str(artist.birthdate) if artist.birthdate else '')
-            birthdate = parse_date(birthdate_str) if birthdate_str else artist.birthdate
+            birthdate = parse_datetime(birthdate_str) if birthdate_str else artist.birthdate
 
             # Genres
             genre_ids = data.get('genres', [])

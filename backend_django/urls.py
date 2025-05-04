@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import artistView,favoriteView,userView,albumView,songView,authView,adminView, testView, statView, playlistView,adminPlusView
+from .views import artistView,favoriteView,userView,albumView,songView,authView,adminView, testView, statView, playlistView,adminPlusView, genreView
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -37,8 +37,8 @@ api_urlpatterns  = [
     path('playlists/create', playlistView.create_playlist, name='create_playlist'),
     path('playlists/add_song', playlistView.add_song_to_playlist, name='add_song_to_playlist'),
 
-    
-
+    # GENRE
+    path('genres', genreView.get_all_genres, name='get_all_genres'),
 
     # MESSAGE
     path('users/messages/<str:clerk_id>', userView.get_messages,name='get_messages'),
