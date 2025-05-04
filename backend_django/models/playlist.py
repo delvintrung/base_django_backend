@@ -1,5 +1,5 @@
 from mongoengine import Document, StringField, DateTimeField, EmbeddedDocument, EmbeddedDocumentListField, ObjectIdField, ListField
-import datetime
+from datetime import datetime
 
 class Song(EmbeddedDocument):
     _id = ObjectIdField()
@@ -15,9 +15,9 @@ class Playlist(Document):
     clerkId = StringField(required=True)
     songs = ListField(ObjectIdField())
 
-    createdAt = StringField(default=lambda: datetime.datetime.utcnow().isoformat())
-    updatedAt = StringField(default=lambda: datetime.datetime.utcnow().isoformat())
+    createdAt = DateTimeField(default=datetime.utcnow)
+    updatedAt = DateTimeField(default=datetime.utcnow)
 
     def save(self, *args, **kwargs):
-        self.updatedAt = datetime.datetime.utcnow().isoformat()
+        self.updatedAt = datetime.utcnow()
         return super(Playlist, self).save(*args, **kwargs)

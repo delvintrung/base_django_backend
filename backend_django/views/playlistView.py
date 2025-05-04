@@ -2,7 +2,6 @@ import json
 import random
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from mongoengine.connection import get_db
 import datetime
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -236,7 +235,6 @@ def update_playlist(request, playlist_id):
     try:
         if request.method != 'POST':
             return JsonResponse({'message': 'Method not allowed'}, status=405)
-
         title = request.POST.get('title')
         avatar = request.FILES.get('avatar')
 
@@ -249,20 +247,28 @@ def update_playlist(request, playlist_id):
             return JsonResponse({'message': 'Playlist title cannot be empty'}, status=400)
 
         if title:
+            print("Playlist title:", title)
             playlist.title = title
         if avatar:
             playlist.avatar = upload_to_cloudinary(avatar)
-
+        print("Playlist avatar:", playlist)
         playlist.save()
         return JsonResponse(serialize_playlist(playlist), status=200)
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
 @csrf_exempt
-def add_song_to_playlist(request, playlist_id):
+def add_song_to_playlist(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body.decode('utf-8'))
+        if not data:
+            return JsonResponse({'error': 'Empty request body'}, status=400)
         song_id = data.get('songId')
+        playlist_id = data.get('playlistId')
         
         if not song_id:
             return JsonResponse({'error': 'Missing songId'}, status=400)
