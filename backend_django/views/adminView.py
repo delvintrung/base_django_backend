@@ -381,7 +381,7 @@ def createAlbum(request):
             updatedAt=datetime.now(),
         )
 
-        # Trả về thông tin album
+        
         album_data = {
             "_id": str(album.id),
             "title": album.title,
