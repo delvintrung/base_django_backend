@@ -22,33 +22,43 @@ def serialize_document(artist):
 
 
 @csrf_exempt
+@csrf_exempt
 def get_all_artists(request):
     try:
         artists = Artist.objects.all()
         artist_list = []
 
         for artist in artists:
+            genres_data = []
+            if artist.genres:
+                for genre in artist.genres:
+                    try:
+                        genres_data.append({
+                           
+                            'name': genre.name
+                        })
+                    except Exception:
+                        genres_data.append({
+                            '_id': None,
+                            'name': "Unknown Genre"
+                        })
+
             artist_list.append({
                 '_id': str(artist.id),
                 'name': artist.name,
                 'birthdate': str(artist.birthdate) if artist.birthdate else None,
                 'imageUrl': artist.imageUrl,
-                'createdAt': artist.createdAt if artist.createdAt else None,
-                'updatedAt': artist.updatedAt if artist.updatedAt else None,
+                'createdAt': artist.createdAt.isoformat() if artist.createdAt else None,
+                'updatedAt': artist.updatedAt.isoformat() if artist.updatedAt else None,
                 'listeners': artist.listeners,
                 'followers': artist.followers,
                 'description': artist.description,
-                'genres': [str(genre.id) for genre in artist.genres] if artist.genres else [],
-
-                # Thêm các trường khác nếu có, ví dụ:
-                # 'genre': artist.genre,
-                # 'image_url': artist.image_url,
+                'genres': genres_data,  # gồm cả _id và name
             })
 
-        return JsonResponse( artist_list, safe=False)
+        return JsonResponse(artist_list, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 @csrf_exempt
 def get_featured_songs(request):

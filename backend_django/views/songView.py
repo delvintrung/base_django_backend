@@ -13,6 +13,7 @@ def serialize_document(song):
     data = song.to_mongo().to_dict()
     data['_id'] = str(data['_id'])
     data['premium'] = data.get('premium', False) 
+    data['lyrics'] = data.get('lyrics', None)
 
     # Serialize artist
     if song.artist:
@@ -162,52 +163,6 @@ def get_featured_songs(request):
         return JsonResponse({'error': str(e)}, status=500)
     
     
-@csrf_exempt
-def create_song(request):
-    try:
-        if request.method != 'POST':
-            return JsonResponse({'message': 'Method not allowed'}, status=405)
-
-        if request.content_type == 'application/json':
-            data = json.loads(request.body)
-        else:
-            data = request.POST
-
-        title = data.get('title')
-
-        artist_id = data.get('artist')
-
-        albumId = data.get('albumId')
-        duration = data.get('duration')
-        imageUrl = data.get('imageUrl')
-        audioUrl = data.get('audioUrl')
-
-        required_fields = ['title', 'artist', 'albumId', 'duration', 'imageUrl', 'audioUrl']
-        missing = [f for f in required_fields if not data.get(f)]
-        if missing:
-            return JsonResponse({'error': f'Missing fields: {missing}'}, status=400)
-
-        artist = Artist.objects.get(id=ObjectId(artist_id))
-
-        song = Song(
-            title=title,
-
-            artist=artist,
-            albumId=ObjectId(albumId),
-            duration=int(duration),
-            imageUrl=imageUrl,
-            audioUrl=audioUrl
-
-        )
-        song.save()
-
-        return JsonResponse({'message': 'Song created successfully', 'id': str(song.id)}, status=201)
-
-
-    except Artist.DoesNotExist:
-        return JsonResponse({'error': 'Artist not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
 
 def search_songs(request):
     try:
