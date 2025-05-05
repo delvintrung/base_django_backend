@@ -19,6 +19,7 @@ class Song(Document):
     audioUrl = StringField(required=True)
     createdAt = DateTimeField(default=datetime.now)
     updatedAt = DateTimeField(default=datetime.now)
+    lyrics = StringField()
     videoUrl = StringField()
     premium = BooleanField()
  

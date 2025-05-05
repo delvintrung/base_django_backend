@@ -52,7 +52,6 @@ api_urlpatterns  = [
     path('songs/featured', songView.get_featured_songs, name='get_featured_songs'),
     path('songs/made-for-you', songView.get_featured_songs, name='get_made_for_you_songs'),
     path('songs', songView.get_all_songs),
-    path('songs/create', songView.create_song),
     path('songs/<str:song_id>', songView.get_song, name='get_song'),  
     path('songs/delete/<str:song_id>', songView.delete_song, name='delete_song'),
     

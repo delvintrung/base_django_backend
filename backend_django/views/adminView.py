@@ -162,6 +162,7 @@ def delete_song(request, song_id):
 @csrf_exempt
 @require_http_methods(["PUT"])
 def update_song(request, id):
+    print("Update song request received", id)
     if request.method != 'PUT':
         return JsonResponse({"message": "Method not allowed"}, status=405)
 
@@ -181,9 +182,11 @@ def update_song(request, id):
     artist = data.get('artist')
     duration = data.get('duration')
     album_id = data.get('albumId')
-
+    lyrics = data.get('lyrics')
     audio_file = files.get('audioUrl')
     image_file = files.get('imageUrl')
+
+    print("Parsed data:", data.get('albumId'), data.get('artist'), data.get('title'), data.get('duration'))
 
     if audio_file:
         song.audioUrl = upload_to_cloudinary(audio_file)
@@ -233,6 +236,8 @@ def update_song(request, id):
                 old_album.updatedAt = datetime.now()
                 old_album.save()
             song.albumId = None
+    if lyrics:
+        song.lyrics = lyrics
 
     song.updatedAt = datetime.now()
     song.save()
@@ -245,6 +250,7 @@ def update_song(request, id):
         "image_url": song.imageUrl,
         "duration": song.duration,
         "albumId": str(song.albumId) if song.albumId else None,
+        "lyrics": song.lyrics,
         "updatedAt": song.updatedAt.isoformat(),
     }, status=200)
 
@@ -258,6 +264,7 @@ def create_song(request):
             artist_id = request.POST.get('artist') 
             album_id = request.POST.get('albumId')  
             duration = request.POST.get('duration')
+            lyrics = request.POST.get('lyrics')
             audio_file = request.FILES.get('audioFile')  
             image_file = request.FILES.get('imageFile')  
         
@@ -269,17 +276,33 @@ def create_song(request):
             audioUrl = upload_to_cloudinary(audio_file)  # Bạn cần xử lý upload tương tự
             if not audioUrl:
                 return JsonResponse({"message": "Error uploading image to Cloudinary"},)
-            song = Song(
-                title=title,
-                artist=artist_id, 
-                audioUrl=audioUrl,
-                imageUrl=imageUrl,
-                duration=duration,
-                albumId = album_id if album_id not in (None, '', 'null') else None,
-                createdAt=datetime.now(),
-                updatedAt=datetime.now(),
-            )
+            
+            song_data={}
+
+            song_data = {
+            'title': title,
+            'artist': artist_id,
+            'duration': int(duration),
+            'imageUrl': imageUrl,
+            'audioUrl': audioUrl
+            }
+            if album_id:
+                song_data['albumId'] = album_id if album_id not in (None, '', 'null') else None,
+            if lyrics:
+                song_data['lyrics'] = lyrics
+            song = Song(**song_data)
             song.save()
+            # song = Song(
+            #     title=title,
+            #     artist=artist_id, 
+            #     audioUrl=audioUrl,
+            #     imageUrl=imageUrl,
+            #     duration=duration,
+            #     albumId = album_id if album_id not in (None, '', 'null') else None,
+            #     createdAt=datetime.now(),
+            #     updatedAt=datetime.now(),
+            # )
+            # song.save()
             if  not album_id :
                 albums_collection = Album._get_collection()
                 albums_collection.update_one({'_id': ObjectId(album_id)}, {'$push': {'songs': song.id}})
@@ -290,7 +313,6 @@ def create_song(request):
                     except Album.DoesNotExist:
                         return JsonResponse({"message": "Album not found"}, status=404)
 
-            print(album_id)
             song_data = {
                 "_id": str(song.id),
                 "title": song.title,
